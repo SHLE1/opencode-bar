@@ -1607,7 +1607,7 @@ final class TokenManager: @unchecked Sendable {
     }
 
     private func extractClaudeOAuthPayload(from dict: [String: Any]) -> ClaudeOAuthPayload? {
-        let accessKeys: Set<String> = ["accesstoken", "oauthtoken", "token"]
+        let accessKeys: Set<String> = ["accesstoken", "access", "oauthtoken", "token"]
         let refreshKeys: Set<String> = ["refreshtoken", "oauthrefreshtoken", "refresh"]
         let expiresKeys: Set<String> = ["expiresat", "expires", "expiration", "expiresin"]
         let accountKeys: Set<String> = ["accountid", "userid", "id"]
@@ -1990,6 +1990,62 @@ final class TokenManager: @unchecked Sendable {
         ]
     }
 
+    /// Possible opencode-anthropic-auth accounts.json locations in priority order:
+    /// 1. $XDG_CONFIG_HOME/opencode/opencode-anthropic-auth/accounts.json (if XDG_CONFIG_HOME is set)
+    /// 2. ~/.config/opencode/opencode-anthropic-auth/accounts.json (plugin default)
+    private func claudeAnthropicAuthPaths() -> [URL] {
+        buildOpenCodeFilePaths(
+            envVarName: "XDG_CONFIG_HOME",
+            envRelativePathComponents: ["opencode", "opencode-anthropic-auth", "accounts.json"],
+            fallbackRelativePathComponents: [
+                [".config", "opencode", "opencode-anthropic-auth", "accounts.json"]
+            ]
+        )
+    }
+
+    func readClaudeAnthropicAuthFiles(at paths: [URL]) -> [ClaudeAuthAccount] {
+        var accounts: [ClaudeAuthAccount] = []
+
+        for path in paths {
+            guard let dict = readJSONDictionary(at: path) else { continue }
+            let rawAccounts = valueForNormalizedKey("accounts", in: dict) as? [Any] ?? [dict]
+            var pathAccounts: [ClaudeAuthAccount] = []
+
+            for rawAccount in rawAccounts {
+                guard let accountDict = rawAccount as? [String: Any] else { continue }
+                if let enabled = valueForNormalizedKey("enabled", in: accountDict) as? Bool,
+                   enabled == false {
+                    continue
+                }
+                guard let payload = extractClaudeOAuthPayload(from: accountDict) else { continue }
+
+                pathAccounts.append(
+                    ClaudeAuthAccount(
+                        accessToken: payload.accessToken,
+                        accountId: payload.accountId,
+                        email: payload.email,
+                        refreshToken: payload.refreshToken,
+                        expiresAt: payload.expiresAt,
+                        authSource: path.path,
+                        sourceLabels: [claudeSourceLabel(for: .opencodeAuth)],
+                        source: .opencodeAuth
+                    )
+                )
+            }
+
+            if !pathAccounts.isEmpty {
+                logger.info("Loaded \(pathAccounts.count) Claude account(s) from opencode-anthropic-auth at \(path.path)")
+                accounts.append(contentsOf: pathAccounts)
+            }
+        }
+
+        return accounts
+    }
+
+    private func readClaudeAnthropicAuthFiles() -> [ClaudeAuthAccount] {
+        readClaudeAnthropicAuthFiles(at: claudeAnthropicAuthPaths())
+    }
+
     private func readClaudeCodeAuthFiles() -> [ClaudeAuthAccount] {
         var accounts: [ClaudeAuthAccount] = []
         for path in claudeCodeAuthPaths() {
@@ -2071,6 +2127,8 @@ final class TokenManager: @unchecked Sendable {
                 )
             )
         }
+
+        accounts.append(contentsOf: readClaudeAnthropicAuthFiles())
 
         let keychainAccounts = readClaudeCodeKeychainAccounts()
         accounts.append(contentsOf: keychainAccounts)
@@ -3152,11 +3210,20 @@ final class TokenManager: @unchecked Sendable {
         lines.append("")
         lines.append("[Claude]")
         lines.append("  OpenCode auth.json (\(shortPath(openCodePath))): \(tokenStatus(hasAuth: openCodeAuth != nil, token: openCodeAuth?.anthropic?.access, accountId: openCodeAuth?.anthropic?.accountId))")
-        let claudeTokenKeys: Set<String> = ["accesstoken", "oauthtoken", "token"]
+        let claudeTokenKeys: Set<String> = ["accesstoken", "access", "oauthtoken", "token"]
         let claudeKeychainPrimary = "Claude Code-credentials"
         let claudeKeychainSecondary = "Claude Code"
         lines.append("  Claude Code Keychain (\(claudeKeychainPrimary)): \(keychainStatus(service: claudeKeychainPrimary, tokenKeys: claudeTokenKeys))")
         lines.append("  Claude Code Keychain (\(claudeKeychainSecondary)): \(keychainStatus(service: claudeKeychainSecondary, tokenKeys: claudeTokenKeys))")
+
+        if let anthropicAuthPath = claudeAnthropicAuthPaths().first {
+            let anthropicAccounts = readClaudeAnthropicAuthFiles(at: [anthropicAuthPath])
+            if anthropicAccounts.isEmpty {
+                lines.append("  opencode-anthropic-auth accounts.json (\(shortPath(anthropicAuthPath.path))): \(fileStatus(path: anthropicAuthPath, tokenKeys: claudeTokenKeys))")
+            } else {
+                lines.append("  opencode-anthropic-auth accounts.json (\(shortPath(anthropicAuthPath.path))): FOUND (\(anthropicAccounts.count) account(s))")
+            }
+        }
 
         let claudePaths = claudeCodeAuthPaths()
         if let configPath = claudePaths.first {
