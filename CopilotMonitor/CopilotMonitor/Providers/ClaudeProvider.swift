@@ -158,7 +158,10 @@ final class ClaudeProvider: ProviderProtocol {
         let merged = CandidateDedupe.merge(
             candidates,
             accountId: { $0.dedupeKey },
-            isSameUsage: { _, _ in false },
+            // OpenCode and Claude/Anthropic can resolve the same account to different
+            // identifiers (for example tagged_id vs uuid). Bridge those sources by email
+            // so one human account still renders as one Claude row.
+            isSameUsage: shouldMergeByEmail,
             priority: { ($0.hasUsageData ? 100 : 0) + sourcePriority($0.source) },
             mergeCandidates: mergeCandidates
         )
@@ -305,6 +308,19 @@ final class ClaudeProvider: ProviderProtocol {
             source: primary.source,
             hasUsageData: primary.hasUsageData || secondary.hasUsageData
         )
+    }
+
+    private func shouldMergeByEmail(_ lhs: ClaudeAccountCandidate, _ rhs: ClaudeAccountCandidate) -> Bool {
+        guard let lhsEmail = normalizedNonEmpty(lhs.details.email, lowercase: true),
+              let rhsEmail = normalizedNonEmpty(rhs.details.email, lowercase: true),
+              lhsEmail == rhsEmail else {
+            return false
+        }
+
+        if lhs.dedupeKey != rhs.dedupeKey {
+            logger.info("Bridging Claude accounts by email across mixed identifiers: \(lhsEmail)")
+        }
+        return true
     }
 
     private func normalizedNonEmpty(_ value: String?, lowercase: Bool = false) -> String? {
