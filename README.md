@@ -54,7 +54,7 @@ Download the latest `.dmg` file from the [**Releases**](https://github.com/opggi
 | **Synthetic** | Quota-based | 5h usage limit, request limits, reset time |
 | **Antigravity** | Quota-based | Local cache reverse parsing (`state.vscdb`), no localhost dependency |
 | **Chutes AI** | Quota-based | Daily quota limits (300/2000/5000), credits balance |
-| **GitHub Copilot** | Quota-based | Daily history, overage tracking |
+| **GitHub Copilot** | Quota-based | Multi-account, daily history, overage tracking, auth source labels |
 
 ### OpenCode Plugins
 - **Antigravity/Gemini**
@@ -67,6 +67,12 @@ Download the latest `.dmg` file from the [**Releases**](https://github.com/opggi
 - **Codex**: `Soju06/codex-lb` (writes `~/.codex-lb/`)
 
 ### Other AI agents beyond OpenCode that supports auto-detection
+- **GitHub Copilot** (multi-source discovery)
+  - **OpenCode auth** - Auto-detected from OpenCode `auth.json` (`copilot` provider entry)
+  - **Copilot CLI** - Auto-detected through macOS Keychain (`github.com` entries)
+  - **VS Code / Cursor** - Auto-detected from `~/.config/github-copilot/hosts.json` and `~/.config/github-copilot/apps.json`
+  - **Browser Cookies** - Chrome, Brave, Arc, Edge session cookies
+  - Multiple accounts from different sources are automatically deduplicated and merged
 - **Codex**
   - **Codex for Mac** - Auto-detected through `~/.codex/auth.json`
   - **Codex CLI** - Auto-detected through `~/.codex/auth.json`
@@ -131,7 +137,7 @@ open "$(xcodebuild -project CopilotMonitor/CopilotMonitor.xcodeproj -scheme Copi
 1. **Install OpenCode**: Make sure you have OpenCode installed and authenticated with your providers
 2. **Launch the app**: Run OpenCode Bar
 3. **View usage**: Click the menu bar icon to see all your provider usage
-4. **GitHub Copilot** (optional): Automatically detected via browser cookies (Chrome, Brave, Arc, Edge supported)
+4. **GitHub Copilot** (optional): Automatically detected from multiple sources — OpenCode auth, Copilot CLI Keychain, VS Code/Cursor config files, and browser cookies (Chrome, Brave, Arc, Edge). Multiple accounts are deduplicated automatically.
 
 ### Command Line Interface (CLI)
 
@@ -177,6 +183,8 @@ Provider              Type             Usage       Key Metrics
 ─────────────────────────────────────────────────────────────────────────────────
 Claude                Quota-based      77%         23/100 remaining
 Codex                 Quota-based      0%          100/100 remaining
+Copilot (user1)       Quota-based      45%         550/1000 remaining
+Copilot (user2)       Quota-based      12%         880/1000 remaining
 Gemini CLI (user1@gmail.com) Quota-based      0%          100% remaining
 Gemini CLI (user2@company.com) Quota-based    15%         85% remaining
 Kimi for Coding       Quota-based      26%         74/100 remaining
@@ -195,6 +203,33 @@ $ opencodebar status --json
     "entitlement": 100,
     "usagePercentage": 77,
     "overagePermitted": false
+  },
+  "copilot": {
+    "type": "quota-based",
+    "remaining": 1430,
+    "entitlement": 2000,
+    "usagePercentage": 28,
+    "overagePermitted": true,
+    "accounts": [
+      {
+        "index": 0,
+        "login": "user1",
+        "authSource": "opencode",
+        "remaining": 550,
+        "entitlement": 1000,
+        "usagePercentage": 45,
+        "overagePermitted": true
+      },
+      {
+        "index": 1,
+        "login": "user2",
+        "authSource": "copilot_cli_keychain",
+        "remaining": 880,
+        "entitlement": 1000,
+        "usagePercentage": 12,
+        "overagePermitted": true
+      }
+    ]
   },
   "gemini_cli": {
     "type": "quota-based",
@@ -309,8 +344,8 @@ Quit (⌘Q)
 ## How It Works
 
 1. **Token Discovery**: Reads authentication tokens from OpenCode's `auth.json` (with multi-path fallback)
-2. **Cookie Detection**: Finds GitHub Copilot sessions from Chrome, Brave, Arc, or Edge (with profile support)
-3. **Parallel Fetching**: Queries all provider APIs simultaneously
+2. **Multi-Source Account Discovery**: For providers like GitHub Copilot, discovers accounts from multiple sources (OpenCode auth, CLI Keychain, VS Code config, browser cookies) and deduplicates by login/email
+3. **Parallel Fetching**: Queries all provider APIs simultaneously using TaskGroup
 4. **Smart Caching**: Falls back to cached data on network errors
 5. **Graceful Degradation**: Shows available providers even if some fail
 
@@ -330,9 +365,16 @@ The app searches for `auth.json` in these locations (in order):
 3. `~/Library/Application Support/opencode/auth.json` (macOS fallback)
 
 ### GitHub Copilot not showing
-- Make sure you're signed into GitHub in a supported browser (Chrome, Brave, Arc, or Edge)
-- The app reads session cookies from browser profiles—no manual login required
-- Check that your browser has active GitHub cookies (try visiting github.com)
+GitHub Copilot accounts are discovered from multiple sources (in priority order):
+1. **OpenCode auth** — `copilot` entry in OpenCode `auth.json`
+2. **Copilot CLI Keychain** — macOS Keychain entries for `github.com`
+3. **VS Code / Cursor** — `~/.config/github-copilot/hosts.json` and `apps.json`
+4. **Browser Cookies** — Chrome, Brave, Arc, Edge session cookies
+
+If Copilot still doesn't appear:
+- Verify at least one source has valid credentials (`opencodebar provider copilot` for details)
+- For browser cookies: make sure you're signed into GitHub in a supported browser
+- Accounts from different sources with the same login are automatically merged
 
 ### OpenCode CLI commands failing
 The app dynamically searches for the `opencode` binary in:
