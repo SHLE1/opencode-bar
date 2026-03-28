@@ -151,4 +151,110 @@ final class MiniMaxProviderTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
     }
+
+    func testFetchPreservesSubOnePercentUsageForMiniMaxWindows() async throws {
+        guard TokenManager.shared.getMiniMaxCodingPlanAPIKey() != nil else {
+            throw XCTSkip("MiniMax Coding Plan API key not available; skipping fetch test.")
+        }
+
+        let session = makeSession()
+        let provider = MiniMaxProvider(tokenManager: .shared, session: session)
+        let responseJSON = """
+        {
+          "model_remains": [
+            {
+              "start_time": 1774587600000,
+              "end_time": 1774605600000,
+              "remains_time": 1715317,
+              "current_interval_total_count": 1500,
+              "current_interval_usage_count": 1494,
+              "model_name": "MiniMax-M*",
+              "current_weekly_total_count": 15000,
+              "current_weekly_usage_count": 14940,
+              "weekly_start_time": 1774224000000,
+              "weekly_end_time": 1774828800000,
+              "weekly_remains_time": 224915317
+            }
+          ],
+          "base_resp": {
+            "status_code": 0,
+            "status_msg": "success"
+          }
+        }
+        """
+
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(responseJSON.utf8))
+        }
+
+        let result = try await provider.fetch()
+
+        switch result.usage {
+        case .quotaBased(let remaining, let entitlement, let overagePermitted):
+            XCTAssertEqual(remaining, 99)
+            XCTAssertEqual(entitlement, 100)
+            XCTAssertFalse(overagePermitted)
+        default:
+            XCTFail("Expected quota-based usage")
+        }
+
+        XCTAssertEqual(result.details?.fiveHourUsage ?? -1, 0.4, accuracy: 0.001)
+        XCTAssertEqual(result.details?.sevenDayUsage ?? -1, 0.4, accuracy: 0.001)
+    }
+
+    func testFetchPrefersUsedQuotaRowOverHigherCapacityZeroUsageRow() async throws {
+        guard TokenManager.shared.getMiniMaxCodingPlanAPIKey() != nil else {
+            throw XCTSkip("MiniMax Coding Plan API key not available; skipping fetch test.")
+        }
+
+        let session = makeSession()
+        let provider = MiniMaxProvider(tokenManager: .shared, session: session)
+        let responseJSON = """
+        {
+          "model_remains": [
+            {
+              "start_time": 1774587600000,
+              "end_time": 1774605600000,
+              "remains_time": 1715317,
+              "current_interval_total_count": 9000,
+              "current_interval_usage_count": 9000,
+              "model_name": "speech-hd",
+              "current_weekly_total_count": 63000,
+              "current_weekly_usage_count": 63000,
+              "weekly_start_time": 1774224000000,
+              "weekly_end_time": 1774828800000,
+              "weekly_remains_time": 224915317
+            },
+            {
+              "start_time": 1774587600000,
+              "end_time": 1774605600000,
+              "remains_time": 1715317,
+              "current_interval_total_count": 4500,
+              "current_interval_usage_count": 4469,
+              "model_name": "MiniMax-M*",
+              "current_weekly_total_count": 45000,
+              "current_weekly_usage_count": 44659,
+              "weekly_start_time": 1774224000000,
+              "weekly_end_time": 1774828800000,
+              "weekly_remains_time": 224915317
+            }
+          ],
+          "base_resp": {
+            "status_code": 0,
+            "status_msg": "success"
+          }
+        }
+        """
+
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(responseJSON.utf8))
+        }
+
+        let result = try await provider.fetch()
+
+        XCTAssertEqual(result.details?.fiveHourUsage ?? -1, (31.0 / 4500.0) * 100.0, accuracy: 0.0001)
+        XCTAssertEqual(result.details?.sevenDayUsage ?? -1, (341.0 / 45000.0) * 100.0, accuracy: 0.0001)
+    }
 }

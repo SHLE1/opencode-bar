@@ -1232,12 +1232,12 @@ final class StatusBarController: NSObject {
             logger.debug(
                 "Recent change percent resolved: provider=\(candidate.identifier.displayName), percent=\(String(format: "%.2f", percent))"
             )
-            return String(format: "%.0f%%", percent)
+            return UsagePercentDisplayFormatter.string(from: percent)
         }
     }
 
     private func formatAlertText(identifier _: ProviderIdentifier, usedPercent: Double) -> String {
-        return String(format: "%.0f%%", usedPercent)
+        return UsagePercentDisplayFormatter.string(from: usedPercent)
     }
 
     private func formatProviderForStatusBar(identifier: ProviderIdentifier, result: ProviderResult) -> String {
@@ -1247,7 +1247,7 @@ final class StatusBarController: NSObject {
             return costText
         case .quotaBased:
             let maxPercent = preferredUsedPercentForStatusBar(identifier: identifier, result: result) ?? result.usage.usagePercentage
-            let usageText = String(format: "%.0f%%", maxPercent)
+            let usageText = UsagePercentDisplayFormatter.string(from: maxPercent)
             return usageText
         }
     }
@@ -2413,7 +2413,7 @@ final class StatusBarController: NSObject {
         ))
         
         for (index, percent) in usedPercents.enumerated() {
-            let percentText = String(format: "%.0f%%", percent)
+            let percentText = UsagePercentDisplayFormatter.string(from: percent)
             let percentColor = isEnabled ? colorForUsagePercent(percent) : NSColor.disabledControlTextColor
             let font: NSFont = isEnabled && percent >= 100
                 ? MenuDesignToken.Typography.monospacedBoldFont

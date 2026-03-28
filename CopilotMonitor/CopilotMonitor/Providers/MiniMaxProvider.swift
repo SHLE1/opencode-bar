@@ -171,7 +171,8 @@ final class MiniMaxProvider: ProviderProtocol {
         }
 
         let overallUsed = max(fiveHourUsage ?? 0, weeklyUsage ?? 0)
-        let remainingPercent = Int((100.0 - overallUsed).rounded())
+        let aggregateUsedPercent = UsagePercentDisplayFormatter.wholePercent(from: overallUsed)
+        let remainingPercent = max(0, 100 - aggregateUsedPercent)
 
         let usage = ProviderUsage.quotaBased(
             remaining: remainingPercent,
@@ -256,13 +257,19 @@ final class MiniMaxProvider: ProviderProtocol {
         guard !quotaRows.isEmpty else { return nil }
 
         return quotaRows.max { lhs, rhs in
+            let lhsPercent = max(lhs.fiveHourUsagePercent ?? 0, lhs.weeklyUsagePercent ?? 0)
+            let rhsPercent = max(rhs.fiveHourUsagePercent ?? 0, rhs.weeklyUsagePercent ?? 0)
+            if lhsPercent != rhsPercent {
+                return lhsPercent < rhsPercent
+            }
+
             if lhs.quotaScore != rhs.quotaScore {
                 return lhs.quotaScore < rhs.quotaScore
             }
 
-            let lhsPercent = max(lhs.fiveHourUsagePercent ?? 0, lhs.weeklyUsagePercent ?? 0)
-            let rhsPercent = max(rhs.fiveHourUsagePercent ?? 0, rhs.weeklyUsagePercent ?? 0)
-            return lhsPercent < rhsPercent
+            let lhsName = lhs.modelName ?? ""
+            let rhsName = rhs.modelName ?? ""
+            return lhsName.localizedStandardCompare(rhsName) == .orderedAscending
         }
     }
 

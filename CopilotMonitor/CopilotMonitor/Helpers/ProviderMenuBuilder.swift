@@ -1391,7 +1391,7 @@ extension StatusBarController {
             attributes: [.font: NSFont.boldSystemFont(ofSize: headerFontSize), .foregroundColor: NSColor.disabledControlTextColor]
         ))
         rightAttributedString.append(NSAttributedString(
-            string: String(format: "%.0f%%", usagePercent),
+            string: UsagePercentDisplayFormatter.string(from: usagePercent),
             attributes: [.font: NSFont.boldSystemFont(ofSize: headerFontSize), .foregroundColor: valueColor]
         ))
         rightTextField.attributedStringValue = rightAttributedString

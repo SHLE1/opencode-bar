@@ -1,5 +1,23 @@
 import Foundation
 
+enum UsagePercentDisplayFormatter {
+    static func string(from percent: Double) -> String {
+        let normalized = min(max(percent, 0.0), 999.0)
+        if normalized > 0.0, normalized < 1.0 {
+            return "1%"
+        }
+        return String(format: "%.0f%%", normalized)
+    }
+
+    static func wholePercent(from percent: Double) -> Int {
+        let normalized = min(max(percent, 0.0), 100.0)
+        if normalized > 0.0, normalized < 1.0 {
+            return 1
+        }
+        return Int(normalized.rounded())
+    }
+}
+
 struct ProviderResult {
     let usage: ProviderUsage
     let details: DetailedUsage?
@@ -600,7 +618,7 @@ struct TableFormatter {
         guard entitlement > 0 else { return "0%" }
         let used = entitlement - remaining
         let percentage = (Double(used) / Double(entitlement)) * 100
-        return String(format: "%.0f%%", percentage)
+        return UsagePercentDisplayFormatter.string(from: percentage)
     }
 
     private static func formatQuotaMetrics(remaining: Int, entitlement: Int, overagePermitted: Bool) -> String {
@@ -789,14 +807,14 @@ struct TableFormatter {
             if identifier == .minimaxCodingPlan {
                 let percents = [result.details?.fiveHourUsage, result.details?.sevenDayUsage].compactMap { $0 }
                 if percents.count == 2 {
-                    return percents.map { String(format: "%.0f%%", $0) }.joined(separator: ",")
+                    return percents.map { UsagePercentDisplayFormatter.string(from: $0) }.joined(separator: ",")
                 }
             }
             // Z.AI: show both token and MCP percentages when both are available
             if identifier == .zaiCodingPlan {
                 let percents = [result.details?.tokenUsagePercent, result.details?.mcpUsagePercent].compactMap { $0 }
                 if percents.count == 2 {
-                    return percents.map { String(format: "%.0f%%", $0) }.joined(separator: ",")
+                    return percents.map { UsagePercentDisplayFormatter.string(from: $0) }.joined(separator: ",")
                 }
             }
             switch result.usage {
@@ -812,7 +830,7 @@ struct TableFormatter {
         let label = geminiLabel(account: account)
         let providerPadded = label.padding(toLength: providerWidth, withPad: " ", startingAt: 0)
         let typePadded = "Quota-based".padding(toLength: typeWidth, withPad: " ", startingAt: 0)
-        let usageStr = String(format: "%.0f%%", 100 - account.remainingPercentage)
+        let usageStr = UsagePercentDisplayFormatter.string(from: 100 - account.remainingPercentage)
         let usagePadded = usageStr.padding(toLength: usageWidth, withPad: " ", startingAt: 0)
 
         let metricsStr: String

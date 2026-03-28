@@ -195,6 +195,22 @@ final class ProviderUsageTests: XCTestCase {
         XCTAssertTrue(output.contains("100%,80%"))
     }
 
+    func testUsagePercentDisplayFormatterPreservesSubOnePercentUsage() {
+        XCTAssertEqual(UsagePercentDisplayFormatter.string(from: 0.0), "0%")
+        XCTAssertEqual(UsagePercentDisplayFormatter.string(from: 0.4), "1%")
+        XCTAssertEqual(UsagePercentDisplayFormatter.string(from: 1.4), "1%")
+        XCTAssertEqual(UsagePercentDisplayFormatter.wholePercent(from: 0.4), 1)
+    }
+
+    func testTableFormatterShowsOnePercentForMiniMaxSubOnePercentUsage() {
+        let usage = ProviderUsage.quotaBased(remaining: 99, entitlement: 100, overagePermitted: false)
+        let details = DetailedUsage(fiveHourUsage: 0.4, sevenDayUsage: 0.2)
+        let result = ProviderResult(usage: usage, details: details)
+
+        let output = TableFormatter.format([.minimaxCodingPlan: result])
+        XCTAssertTrue(output.contains("1%,1%"))
+    }
+
     func testTableFormatterShowsGeminiPercentOnlyForGeminiAccounts() {
         let geminiAccounts = [
             GeminiAccountQuota(
