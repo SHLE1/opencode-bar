@@ -21,7 +21,8 @@ final class TokenManagerTests: XCTestCase {
 
         XCTAssertEqual(configuration, CodexEndpointConfiguration(
             mode: .directChatGPT,
-            source: "Default ChatGPT usage endpoint"
+            source: "Default ChatGPT usage endpoint",
+            usesOpenAIProviderBaseURL: false
         ))
     }
 
@@ -42,7 +43,8 @@ final class TokenManagerTests: XCTestCase {
 
         XCTAssertEqual(configuration, CodexEndpointConfiguration(
             mode: .directChatGPT,
-            source: "oc-chatgpt-multi-auth direct ChatGPT usage endpoint"
+            source: "oc-chatgpt-multi-auth direct ChatGPT usage endpoint",
+            usesOpenAIProviderBaseURL: false
         ))
     }
 
@@ -62,7 +64,8 @@ final class TokenManagerTests: XCTestCase {
 
         XCTAssertEqual(configuration, CodexEndpointConfiguration(
             mode: .external(usageURL: URL(string: "https://codex.2631.eu/api/codex/usage")!),
-            source: "/tmp/opencode.json"
+            source: "/tmp/opencode.json",
+            usesOpenAIProviderBaseURL: true
         ))
     }
 
@@ -87,7 +90,8 @@ final class TokenManagerTests: XCTestCase {
 
         XCTAssertEqual(configuration, CodexEndpointConfiguration(
             mode: .external(usageURL: URL(string: "https://custom.example.com/api/codex/usage")!),
-            source: "/tmp/opencode.json"
+            source: "/tmp/opencode.json",
+            usesOpenAIProviderBaseURL: false
         ))
     }
 
@@ -112,7 +116,8 @@ final class TokenManagerTests: XCTestCase {
 
         XCTAssertEqual(configuration, CodexEndpointConfiguration(
             mode: .external(usageURL: URL(string: "https://codex.2631.eu/api/codex/usage")!),
-            source: "/tmp/opencode.json"
+            source: "/tmp/opencode.json",
+            usesOpenAIProviderBaseURL: true
         ))
     }
 
@@ -132,7 +137,8 @@ final class TokenManagerTests: XCTestCase {
 
         XCTAssertEqual(configuration, CodexEndpointConfiguration(
             mode: .directChatGPT,
-            source: "Default ChatGPT usage endpoint"
+            source: "Default ChatGPT usage endpoint",
+            usesOpenAIProviderBaseURL: false
         ))
     }
 
@@ -351,7 +357,8 @@ final class TokenManagerTests: XCTestCase {
             email: "user@example.com",
             authSource: "codex-lb",
             sourceLabels: ["Codex LB"],
-            source: .codexLB
+            source: .codexLB,
+            credentialType: .oauthBearer
         )
 
         let accountID = provider.codexRequestAccountID(
@@ -385,6 +392,7 @@ final class TokenManagerTests: XCTestCase {
         XCTAssertEqual(account.externalUsageAccountId, "chatgpt-id")
         XCTAssertEqual(account.email, "user@example.com")
         XCTAssertEqual(account.source, .codexLB)
+        XCTAssertEqual(account.credentialType, .oauthBearer)
     }
 
     func testCodexProviderKeepsDefaultAccountIDInDirectMode() {
@@ -396,7 +404,8 @@ final class TokenManagerTests: XCTestCase {
             email: "user@example.com",
             authSource: "codex-lb",
             sourceLabels: ["Codex LB"],
-            source: .codexLB
+            source: .codexLB,
+            credentialType: .oauthBearer
         )
 
         let accountID = provider.codexRequestAccountID(
@@ -416,7 +425,8 @@ final class TokenManagerTests: XCTestCase {
             email: "user@example.com",
             authSource: "opencode-auth",
             sourceLabels: ["OpenCode"],
-            source: .opencodeAuth
+            source: .opencodeAuth,
+            credentialType: .oauthBearer
         )
 
         let accountID = provider.codexRequestAccountID(
@@ -435,7 +445,8 @@ final class TokenManagerTests: XCTestCase {
             email: nil,
             authSource: "opencode-auth",
             sourceLabels: ["OpenCode"],
-            source: .opencodeAuth
+            source: .opencodeAuth,
+            credentialType: .oauthBearer
         )
 
         XCTAssertNil(account.externalUsageAccountId)
@@ -537,7 +548,8 @@ final class TokenManagerTests: XCTestCase {
             configuration,
             CodexEndpointConfiguration(
                 mode: .external(usageURL: URL(string: "https://from-jsonc.example.com/api/codex/usage")!),
-                source: jsoncPath.path
+                source: jsoncPath.path,
+                usesOpenAIProviderBaseURL: true
             ),
             "Expected JSONC input to remain valid after stripping comments"
         )

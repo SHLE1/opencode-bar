@@ -211,7 +211,7 @@ struct OpenCodeAuth: Codable {
     let anthropic: OAuth?
     let openai: OAuth?
     /// When `openai` in auth.json is not a valid OAuth object, it may be stored
-    /// as an API key object (e.g. `{"type":"apiKey","key":"sk-..."}`).  This field
+    /// as an API key object (e.g. `{"type":"apiKey","key":"sk-..."}`). This field
     /// captures that alternative representation so CodexProvider can still send
     /// `Authorization: Bearer <key>` without requiring OAuth or ~/.codex/auth.json.
     let openaiAPIKey: APIKey?
@@ -380,6 +380,11 @@ enum OpenAIAuthSource {
     case codexAuth
 }
 
+enum OpenAICredentialType {
+    case oauthBearer
+    case apiKey
+}
+
 /// Unified OpenAI account model used by the provider layer
 struct OpenAIAuthAccount {
     let accessToken: String
@@ -389,6 +394,7 @@ struct OpenAIAuthAccount {
     let authSource: String
     let sourceLabels: [String]
     let source: OpenAIAuthSource
+    let credentialType: OpenAICredentialType
 }
 
 enum CodexEndpointMode: Equatable {
@@ -399,6 +405,7 @@ enum CodexEndpointMode: Equatable {
 struct CodexEndpointConfiguration: Equatable {
     let mode: CodexEndpointMode
     let source: String
+    let usesOpenAIProviderBaseURL: Bool
 }
 
 /// Auth source types for Claude account discovery
@@ -1048,7 +1055,8 @@ final class TokenManager: @unchecked Sendable {
     ) -> CodexEndpointConfiguration {
         let defaultConfiguration = CodexEndpointConfiguration(
             mode: .directChatGPT,
-            source: "Default ChatGPT usage endpoint"
+            source: "Default ChatGPT usage endpoint",
+            usesOpenAIProviderBaseURL: false
         )
 
         guard let configDictionary else {
@@ -1064,7 +1072,8 @@ final class TokenManager: @unchecked Sendable {
                resolvedURL.host != nil {
                 return CodexEndpointConfiguration(
                     mode: .external(usageURL: resolvedURL),
-                    source: sourcePath ?? "opencode-bar.codex.usageURL"
+                    source: sourcePath ?? "opencode-bar.codex.usageURL",
+                    usesOpenAIProviderBaseURL: false
                 )
             }
 
@@ -1076,7 +1085,8 @@ final class TokenManager: @unchecked Sendable {
         if hasPlugin(named: "oc-chatgpt-multi-auth", in: configDictionary) {
             return CodexEndpointConfiguration(
                 mode: .directChatGPT,
-                source: "oc-chatgpt-multi-auth direct ChatGPT usage endpoint"
+                source: "oc-chatgpt-multi-auth direct ChatGPT usage endpoint",
+                usesOpenAIProviderBaseURL: false
             )
         }
 
@@ -1096,7 +1106,8 @@ final class TokenManager: @unchecked Sendable {
                 if let usageURL = components.url {
                     return CodexEndpointConfiguration(
                         mode: .external(usageURL: usageURL),
-                        source: sourcePath ?? "provider.openai.options.baseURL"
+                        source: sourcePath ?? "provider.openai.options.baseURL",
+                        usesOpenAIProviderBaseURL: true
                     )
                 }
             }
@@ -1644,7 +1655,8 @@ final class TokenManager: @unchecked Sendable {
             email: normalizedEmail?.isEmpty == true ? nil : normalizedEmail,
             authSource: authSourcePath,
             sourceLabels: [openAISourceLabel(for: .codexLB)],
-            source: .codexLB
+            source: .codexLB,
+            credentialType: .oauthBearer
         )
     }
 
@@ -1907,7 +1919,8 @@ final class TokenManager: @unchecked Sendable {
             email: (primaryEmail?.isEmpty == false) ? primaryEmail : fallbackEmail,
             authSource: primary.authSource,
             sourceLabels: mergedSourceLabels,
-            source: primary.source
+            source: primary.source,
+            credentialType: primary.credentialType
         )
     }
 
@@ -2277,7 +2290,8 @@ final class TokenManager: @unchecked Sendable {
                         email: payload.email,
                         authSource: path.path,
                         sourceLabels: [openAISourceLabel(for: .openCodeMultiAuth)],
-                        source: .openCodeMultiAuth
+                        source: .openCodeMultiAuth,
+                        credentialType: .oauthBearer
                     )
                 )
             }
@@ -3095,13 +3109,12 @@ final class TokenManager: @unchecked Sendable {
                     email: metadata.email,
                     authSource: authSource,
                     sourceLabels: [openAISourceLabel(for: .opencodeAuth)],
-                    source: .opencodeAuth
+                    source: .opencodeAuth,
+                    credentialType: .oauthBearer
                 )
             )
         }
 
-        // When openai in auth.json is stored as an API key (not OAuth), produce
-        // an account that CodexProvider can use with Authorization: Bearer <key>.
         if let auth = readOpenCodeAuth(),
            let apiKey = auth.openaiAPIKey,
            !apiKey.key.isEmpty {
@@ -3114,7 +3127,8 @@ final class TokenManager: @unchecked Sendable {
                     email: nil,
                     authSource: authSource,
                     sourceLabels: ["OpenCode (API Key)"],
-                    source: .opencodeAuth
+                    source: .opencodeAuth,
+                    credentialType: .apiKey
                 )
             )
         }
@@ -3147,7 +3161,31 @@ final class TokenManager: @unchecked Sendable {
                     email: codexEmail,
                     authSource: authSource,
                     sourceLabels: [openAISourceLabel(for: .codexAuth)],
-                    source: .codexAuth
+                    source: .codexAuth,
+                    credentialType: .oauthBearer
+                )
+            )
+        }
+
+        if let codexAuth = readCodexAuth(),
+           codexAuth.tokens?.accessToken?.isEmpty != false,
+           let apiKey = codexAuth.openaiAPIKey?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !apiKey.isEmpty {
+            let homeDir = FileManager.default.homeDirectoryForCurrentUser
+            let authSource = homeDir
+                .appendingPathComponent(".codex")
+                .appendingPathComponent("auth.json")
+                .path
+            accounts.append(
+                OpenAIAuthAccount(
+                    accessToken: apiKey,
+                    accountId: nil,
+                    externalUsageAccountId: nil,
+                    email: nil,
+                    authSource: authSource,
+                    sourceLabels: ["Codex (API Key)"],
+                    source: .codexAuth,
+                    credentialType: .apiKey
                 )
             )
         }
@@ -3352,6 +3390,10 @@ final class TokenManager: @unchecked Sendable {
         if let codexAuth = readCodexAuth(), let access = codexAuth.tokens?.accessToken {
             logger.info("Using Codex native auth (~/.codex/auth.json) as fallback for OpenAI access token")
             return access
+        }
+        if let codexAuth = readCodexAuth(), let apiKey = codexAuth.openaiAPIKey?.trimmingCharacters(in: .whitespacesAndNewlines), !apiKey.isEmpty {
+            logger.info("Using Codex native auth API key (~/.codex/auth.json) as fallback for OpenAI access token")
+            return apiKey
         }
         return nil
     }

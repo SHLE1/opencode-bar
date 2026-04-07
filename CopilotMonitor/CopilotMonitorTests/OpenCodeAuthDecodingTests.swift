@@ -39,6 +39,20 @@ final class OpenCodeAuthDecodingTests: XCTestCase {
         XCTAssertEqual(auth.openrouter?.key, "or-raw-string-key")
     }
 
+    func testOpenAIAPIKeyCanDecodeFromStringValue() throws {
+        let json = """
+        {
+            "openai": "sk-raw-openai-key"
+        }
+        """
+
+        let data = try XCTUnwrap(json.data(using: .utf8))
+        let auth = try JSONDecoder().decode(OpenCodeAuth.self, from: data)
+
+        XCTAssertNil(auth.openai)
+        XCTAssertEqual(auth.openaiAPIKey?.key, "sk-raw-openai-key")
+    }
+
     func testMiniMaxCodingPlanAPIKeyDecodes() throws {
         let json = """
         {
