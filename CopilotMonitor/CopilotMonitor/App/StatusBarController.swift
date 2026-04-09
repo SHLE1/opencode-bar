@@ -78,6 +78,8 @@ enum UsageFetcherError: LocalizedError {
 final class StatusBarController: NSObject {
     private var statusItem: NSStatusItem?
     private var statusBarIconView: StatusBarIconView?
+    private var multiProviderBarView: MultiProviderBarView?
+    private var multiProviderBarMenu: NSMenu!
     private var menu: NSMenu!
     private var signInItem: NSMenuItem!
     private var resetLoginItem: NSMenuItem!
@@ -188,24 +190,10 @@ final class StatusBarController: NSObject {
 
     private var menuBarDisplayMode: MenuBarDisplayMode {
         get {
-            let rawValue = UserDefaults.standard.integer(forKey: StatusBarDisplayPreferences.modeKey)
-            if let mode = MenuBarDisplayMode(rawValue: rawValue) {
-                return mode
-            }
-
-            // Legacy migration: old enum used rawValue 3 for recent-change mode.
-            if rawValue == 3 {
-                if UserDefaults.standard.object(forKey: StatusBarDisplayPreferences.onlyShowModeKey) == nil {
-                    UserDefaults.standard.set(OnlyShowMode.recentChange.rawValue, forKey: StatusBarDisplayPreferences.onlyShowModeKey)
-                }
-                UserDefaults.standard.set(MenuBarDisplayMode.onlyShow.rawValue, forKey: StatusBarDisplayPreferences.modeKey)
-                return .onlyShow
-            }
-
-            return .defaultMode
+            .multiProvider
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: StatusBarDisplayPreferences.modeKey)
+            UserDefaults.standard.set(MenuBarDisplayMode.multiProvider.rawValue, forKey: StatusBarDisplayPreferences.modeKey)
             updateStatusBarDisplayMenuState()
             updateStatusBarText()
         }
@@ -271,6 +259,24 @@ final class StatusBarController: NSObject {
             updateStatusBarDisplayMenuState()
             updateStatusBarText()
         }
+    }
+
+    /// Which providers to show in Multi-Provider Bar mode.
+    /// Defaults to all known providers so users see something useful immediately.
+    private var multiProviderSelection: [ProviderIdentifier] {
+        get {
+            guard let saved = UserDefaults.standard.array(forKey: StatusBarDisplayPreferences.multiProviderProvidersKey) as? [String] else {
+                return ProviderIdentifier.allCases
+            }
+            return saved.compactMap { ProviderIdentifier(rawValue: $0) }
+        }
+        set {
+            UserDefaults.standard.set(newValue.map { $0.rawValue }, forKey: StatusBarDisplayPreferences.multiProviderProvidersKey)
+        }
+    }
+
+    private func isProviderInMultiBar(_ identifier: ProviderIdentifier) -> Bool {
+        multiProviderSelection.contains(identifier)
     }
 
     override init() {
@@ -341,36 +347,47 @@ final class StatusBarController: NSObject {
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+
         statusBarIconView = StatusBarIconView(frame: .zero)
         statusBarIconView?.onIntrinsicContentSizeDidChange = { [weak self] in
             self?.updateStatusItemLayout(reason: "intrinsic-size-changed")
         }
         statusBarIconView?.showLoading()
-        attachStatusIconViewToButton()
+
+        multiProviderBarView = MultiProviderBarView(frame: .zero)
+        multiProviderBarView?.onIntrinsicContentSizeDidChange = { [weak self] in
+            self?.updateStatusItemLayout(reason: "multi-provider-size-changed")
+        }
+
+        attachActiveStatusBarView()
         updateStatusItemLayout(reason: "setup")
     }
 
-    private func attachStatusIconViewToButton() {
-        guard let button = statusItem?.button, let iconView = statusBarIconView else {
-            return
-        }
-
-        iconView.removeFromSuperview()
+    /// Detaches all status bar subviews and attaches the correct one for the current display mode.
+    private func attachActiveStatusBarView() {
+        guard let button = statusItem?.button else { return }
+        button.subviews.forEach { $0.removeFromSuperview() }
         button.title = ""
         button.image = nil
-        button.addSubview(iconView)
+
+        switch menuBarDisplayMode {
+        case .multiProvider:
+            if let mpv = multiProviderBarView { button.addSubview(mpv) }
+        default:
+            if let iconView = statusBarIconView { button.addSubview(iconView) }
+        }
     }
 
     private func updateStatusItemLayout(reason: String) {
-        guard let statusItem, let button = statusItem.button, let iconView = statusBarIconView else {
-            return
-        }
+        guard let statusItem, let button = statusItem.button else { return }
+        let activeView: NSView? = menuBarDisplayMode == .multiProvider ? multiProviderBarView : statusBarIconView
+        guard let activeView else { return }
 
-        let intrinsicSize = iconView.intrinsicContentSize
+        let intrinsicSize = activeView.intrinsicContentSize
         let minWidth = MenuDesignToken.Dimension.iconSize + 4
         let width = max(minWidth, ceil(intrinsicSize.width))
 
-        iconView.frame = NSRect(x: 0, y: 0, width: width, height: intrinsicSize.height)
+        activeView.frame = NSRect(x: 0, y: 0, width: width, height: intrinsicSize.height)
         statusItem.length = width
         button.needsDisplay = true
 
@@ -427,49 +444,36 @@ final class StatusBarController: NSObject {
         let displayModeItem = NSMenuItem(title: "Menu Bar Display", action: nil, keyEquivalent: "")
         displayModeItem.image = NSImage(systemSymbolName: "textformat.size", accessibilityDescription: "Menu Bar Display")
         menuBarDisplayModeMenu = NSMenu()
-        for mode in MenuBarDisplayMode.allCases {
-            if mode == .onlyShow {
-                let onlyShowItem = NSMenuItem(title: mode.title, action: nil, keyEquivalent: "")
-                onlyShowItem.tag = mode.rawValue
-                onlyShowModeMenu = NSMenu()
-                for onlyShowMode in OnlyShowMode.allCases {
-                    if onlyShowMode == .pinnedProvider {
-                        let pinnedProviderItem = NSMenuItem(title: onlyShowMode.title, action: nil, keyEquivalent: "")
-                        onlyShowProviderMenu = NSMenu()
-                        for identifier in ProviderIdentifier.allCases {
-                            let providerItem = NSMenuItem(
-                                title: identifier.displayName,
-                                action: #selector(menuBarOnlyShowProviderSelected(_:)),
-                                keyEquivalent: ""
-                            )
-                            providerItem.target = self
-                            providerItem.representedObject = identifier.rawValue
-                            onlyShowProviderMenu.addItem(providerItem)
-                        }
-                        pinnedProviderItem.submenu = onlyShowProviderMenu
-                        onlyShowModeMenu.addItem(pinnedProviderItem)
-                    } else {
-                        let onlyShowModeItem = NSMenuItem(
-                            title: onlyShowMode.title,
-                            action: #selector(onlyShowModeSelected(_:)),
-                            keyEquivalent: ""
-                        )
-                        onlyShowModeItem.target = self
-                        onlyShowModeItem.tag = onlyShowMode.rawValue
-                        onlyShowModeMenu.addItem(onlyShowModeItem)
-                    }
-                }
-                onlyShowItem.submenu = onlyShowModeMenu
-                menuBarDisplayModeMenu.addItem(onlyShowItem)
-            } else {
-                let modeItem = NSMenuItem(title: mode.title, action: #selector(menuBarDisplayModeSelected(_:)), keyEquivalent: "")
-                modeItem.target = self
-                modeItem.tag = mode.rawValue
-                menuBarDisplayModeMenu.addItem(modeItem)
-            }
+        multiProviderBarMenu = menuBarDisplayModeMenu
+        for identifier in ProviderIdentifier.allCases {
+            let providerItem = NSMenuItem(
+                title: identifier.displayName,
+                action: #selector(multiProviderProviderSelected(_:)),
+                keyEquivalent: ""
+            )
+            providerItem.target = self
+            providerItem.representedObject = identifier.rawValue
+            menuBarDisplayModeMenu.addItem(providerItem)
         }
         displayModeItem.submenu = menuBarDisplayModeMenu
         statusBarOptionsMenu.addItem(displayModeItem)
+
+        let enabledProvidersItem = NSMenuItem(title: "Enabled Providers", action: nil, keyEquivalent: "")
+        enabledProvidersItem.image = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle", accessibilityDescription: "Enabled Providers")
+        enabledProvidersMenu = NSMenu()
+        for identifier in ProviderIdentifier.allCases {
+            let providerItem = NSMenuItem(
+                title: identifier.displayName,
+                action: #selector(toggleProvider(_:)),
+                keyEquivalent: ""
+            )
+            providerItem.target = self
+            providerItem.representedObject = identifier.rawValue
+            enabledProvidersMenu.addItem(providerItem)
+        }
+        enabledProvidersItem.submenu = enabledProvidersMenu
+        statusBarOptionsMenu.addItem(enabledProvidersItem)
+
         statusBarOptionsMenu.addItem(NSMenuItem.separator())
 
         criticalBadgeMenuItem = NSMenuItem(title: "Critical Badge", action: #selector(toggleCriticalBadge(_:)), keyEquivalent: "")
@@ -482,6 +486,7 @@ final class StatusBarController: NSObject {
 
         statusBarOptionsItem.submenu = statusBarOptionsMenu
         menu.addItem(statusBarOptionsItem)
+        updateEnabledProvidersMenu()
         updateStatusBarDisplayMenuState()
 
         predictionPeriodMenu = NSMenu()
@@ -544,14 +549,10 @@ final class StatusBarController: NSObject {
         self.statusItem = statusItem
         statusItem.menu = self.menu
         statusItem.length = NSStatusItem.variableLength
-        
-        if statusBarIconView != nil {
-            debugLog("attachTo: setting up iconView")
-            attachStatusIconViewToButton()
-            updateStatusItemLayout(reason: "attach")
-        } else {
-            debugLog("attachTo: iconView is nil!")
-        }
+
+        debugLog("attachTo: setting up status bar view")
+        attachActiveStatusBarView()
+        updateStatusItemLayout(reason: "attach")
     }
 
     private func updateRefreshIntervalMenu() {
@@ -606,6 +607,22 @@ final class StatusBarController: NSObject {
         menuBarDisplayProvider = identifier
     }
 
+    @objc private func multiProviderProviderSelected(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String,
+              let identifier = ProviderIdentifier(rawValue: rawValue) else { return }
+        var current = multiProviderSelection
+        if let idx = current.firstIndex(of: identifier) {
+            current.remove(at: idx)
+        } else {
+            current.append(identifier)
+        }
+        multiProviderSelection = current
+        debugLog("multiProviderProviderSelected: \(identifier.displayName), now \(current.count) selected")
+        menuBarDisplayMode = .multiProvider
+        updateStatusBarDisplayMenuState()
+        updateStatusBarText()
+    }
+
     @objc private func toggleCriticalBadge(_ sender: NSMenuItem) {
         criticalBadgeEnabled.toggle()
         debugLog("toggleCriticalBadge: value=\(criticalBadgeEnabled)")
@@ -618,42 +635,16 @@ final class StatusBarController: NSObject {
 
     private func updateStatusBarDisplayMenuState() {
         if let menuBarDisplayModeMenu {
-            let currentMode = menuBarDisplayMode
-            let currentOnlyShowMode = onlyShowMode
-            let currentProvider = menuBarDisplayProvider
+            let currentMultiSelection = multiProviderSelection
             for item in menuBarDisplayModeMenu.items {
-                if let submenu = item.submenu, submenu === onlyShowModeMenu {
-                    item.state = (currentMode == .onlyShow) ? .on : .off
-
-                    for onlyShowItem in submenu.items {
-                        if let providerSubmenu = onlyShowItem.submenu {
-                            onlyShowItem.state = (currentMode == .onlyShow && currentOnlyShowMode == .pinnedProvider) ? .on : .off
-                            for providerItem in providerSubmenu.items {
-                                guard let rawValue = providerItem.representedObject as? String,
-                                      let identifier = ProviderIdentifier(rawValue: rawValue) else {
-                                    continue
-                                }
-                                providerItem.state = (
-                                    currentMode == .onlyShow &&
-                                    currentOnlyShowMode == .pinnedProvider &&
-                                    currentProvider == identifier
-                                ) ? .on : .off
-                                providerItem.isEnabled = isProviderEnabled(identifier)
-                            }
-                        } else if let mode = OnlyShowMode(rawValue: onlyShowItem.tag) {
-                            onlyShowItem.state = (currentMode == .onlyShow && currentOnlyShowMode == mode) ? .on : .off
-                        }
-                    }
-                    continue
-                }
-
-                if let mode = MenuBarDisplayMode(rawValue: item.tag) {
-                    item.state = (mode == currentMode) ? .on : .off
-                    continue
-                }
+                guard let rawValue = item.representedObject as? String,
+                      let identifier = ProviderIdentifier(rawValue: rawValue) else { continue }
+                item.state = currentMultiSelection.contains(identifier) ? .on : .off
+                item.isEnabled = isProviderEnabled(identifier)
             }
         }
 
+        updateEnabledProvidersMenu()
         criticalBadgeMenuItem?.state = criticalBadgeEnabled ? .on : .off
         showProviderNameMenuItem?.state = showProviderName ? .on : .off
     }
@@ -691,6 +682,7 @@ final class StatusBarController: NSObject {
     }
 
     private func updateEnabledProvidersMenu() {
+        guard let enabledProvidersMenu else { return }
         for item in enabledProvidersMenu.items {
             guard let idString = item.representedObject as? String,
                   let identifier = ProviderIdentifier(rawValue: idString) else { continue }
@@ -1229,15 +1221,17 @@ final class StatusBarController: NSObject {
                     details: result.details
                 )
                 ?? min(max(result.usage.usagePercentage, 0.0), 999.0)
+            let remaining = max(0.0, 100.0 - percent)
             logger.debug(
-                "Recent change percent resolved: provider=\(candidate.identifier.displayName), percent=\(String(format: "%.2f", percent))"
+                "Recent change percent resolved: provider=\(candidate.identifier.displayName), usedPercent=\(String(format: "%.2f", percent)), remainingPercent=\(String(format: "%.2f", remaining))"
             )
-            return UsagePercentDisplayFormatter.string(from: percent)
+            return UsagePercentDisplayFormatter.string(from: remaining)
         }
     }
 
     private func formatAlertText(identifier _: ProviderIdentifier, usedPercent: Double) -> String {
-        return UsagePercentDisplayFormatter.string(from: usedPercent)
+        let remaining = max(0.0, 100.0 - usedPercent)
+        return UsagePercentDisplayFormatter.string(from: remaining)
     }
 
     private func formatProviderForStatusBar(identifier: ProviderIdentifier, result: ProviderResult) -> String {
@@ -1246,9 +1240,9 @@ final class StatusBarController: NSObject {
             let costText = formatCostForStatusBar(cost ?? 0)
             return costText
         case .quotaBased:
-            let maxPercent = preferredUsedPercentForStatusBar(identifier: identifier, result: result) ?? result.usage.usagePercentage
-            let usageText = UsagePercentDisplayFormatter.string(from: maxPercent)
-            return usageText
+            let maxUsedPercent = preferredUsedPercentForStatusBar(identifier: identifier, result: result) ?? result.usage.usagePercentage
+            let remainingPercent = max(0.0, 100.0 - maxUsedPercent)
+            return UsagePercentDisplayFormatter.string(from: remainingPercent)
         }
     }
 
@@ -1339,7 +1333,29 @@ final class StatusBarController: NSObject {
                     updateStatusBarDisplay(text: formatCostOrStatusBarBrand(totalCost))
                 }
             }
+        case .multiProvider:
+            attachActiveStatusBarView()
+            updateMultiProviderBarView()
         }
+    }
+
+    private func updateMultiProviderBarView() {
+        var entries: [MultiProviderBarView.Entry] = []
+        for identifier in multiProviderSelection {
+            guard isProviderEnabled(identifier),
+                  let result = providerResults[identifier],
+                  case .quotaBased = result.usage,
+                  let icon = iconForProvider(identifier)
+            else { continue }
+
+            let usedPercent = preferredUsedPercentForStatusBar(identifier: identifier, result: result)
+                ?? result.usage.usagePercentage
+            let remainingPercent = max(0.0, 100.0 - usedPercent)
+            entries.append(MultiProviderBarView.Entry(icon: icon, remainingPercent: remainingPercent))
+        }
+        debugLog("updateMultiProviderBarView: \(entries.count) provider(s)")
+        multiProviderBarView?.update(entries: entries)
+        updateStatusItemLayout(reason: "multi-provider-update")
     }
 
     private func sanitizedSubscriptionKey(_ key: String) -> String {
@@ -1691,7 +1707,8 @@ final class StatusBarController: NSObject {
          var deferredUnavailableItems: [NSMenuItem] = []
          var deferredUnavailableProviders: [ProviderIdentifier] = []
 
-         if let copilotResult = providerResults[.copilot],
+         if isProviderEnabled(.copilot),
+            let copilotResult = providerResults[.copilot],
             let accounts = copilotResult.accounts,
             !accounts.isEmpty {
              let copilotAuthLabels = Set(
@@ -1738,7 +1755,7 @@ final class StatusBarController: NSObject {
                     menu.insertItem(quotaItem, at: insertIndex)
                     insertIndex += 1
              }
-         } else if let copilotUsage = currentUsage {
+         } else if isProviderEnabled(.copilot), let copilotUsage = currentUsage {
                 hasQuota = true
                 let limit = copilotUsage.userPremiumRequestEntitlement
                 let used = copilotUsage.usedRequests
@@ -2374,19 +2391,19 @@ final class StatusBarController: NSObject {
         return labels.joined(separator: " + ")
     }
 
-    /// Color for usage percentage: 70%+ → orange, 90%+ → red
-    private func colorForUsagePercent(_ percent: Double) -> NSColor {
-        if percent >= 90 {
+    /// Color for remaining percentage: <= 10% → red, <= 30% → orange, > 30% → secondary
+    private func colorForRemainingPercent(_ remaining: Double) -> NSColor {
+        if remaining <= 10 {
             return .systemRed
-        } else if percent >= 70 {
+        } else if remaining <= 30 {
             return .systemOrange
         } else {
             return .secondaryLabelColor
         }
     }
-    
-    /// Creates NSMenuItem for quota providers with colored percentages.
-    /// Color: 70%+ orange, 90%+ red, 100%+ red+bold
+
+    /// Creates NSMenuItem for quota providers showing remaining percentages.
+    /// Color: <= 30% left → orange, <= 10% left → red, 0% left → red+bold
     private func createNativeQuotaMenuItem(
         name: String,
         usedPercents: [Double],
@@ -2396,7 +2413,7 @@ final class StatusBarController: NSObject {
         let attributed = NSMutableAttributedString()
         let primaryColor = isEnabled ? NSColor.labelColor : NSColor.disabledControlTextColor
         let secondaryColor = isEnabled ? NSColor.secondaryLabelColor : NSColor.disabledControlTextColor
-        
+
         attributed.append(NSAttributedString(
             string: "\(name)",
             attributes: [
@@ -2414,14 +2431,15 @@ final class StatusBarController: NSObject {
                 .foregroundColor: secondaryColor
             ]
         ))
-        
-        for (index, percent) in usedPercents.enumerated() {
-            let percentText = UsagePercentDisplayFormatter.string(from: percent)
-            let percentColor = isEnabled ? colorForUsagePercent(percent) : NSColor.disabledControlTextColor
-            let font: NSFont = isEnabled && percent >= 100
+
+        for (index, usedPercent) in usedPercents.enumerated() {
+            let remainingPercent = max(0.0, 100.0 - usedPercent)
+            let percentText = UsagePercentDisplayFormatter.string(from: remainingPercent)
+            let percentColor = isEnabled ? colorForRemainingPercent(remainingPercent) : NSColor.disabledControlTextColor
+            let font: NSFont = isEnabled && usedPercent >= 100
                 ? MenuDesignToken.Typography.monospacedBoldFont
                 : defaultFontUsagePercent
-            
+
             attributed.append(NSAttributedString(
                 string: percentText,
                 attributes: [
@@ -2429,7 +2447,7 @@ final class StatusBarController: NSObject {
                     .foregroundColor: percentColor
                 ]
             ))
-            
+
             if index < usedPercents.count - 1 {
                 attributed.append(NSAttributedString(
                     string: ", ",
@@ -2440,26 +2458,32 @@ final class StatusBarController: NSObject {
                 ))
             }
         }
-        
-        // attributed.append(NSAttributedString(
-        //     string: ")",
-        //     attributes: [.font: MenuDesignToken.Typography.defaultFont]
-        // ))
-        
+
+        attributed.append(NSAttributedString(
+            string: " left",
+            attributes: [
+                .font: defaultFontUsagePercent,
+                .foregroundColor: secondaryColor
+            ]
+        ))
+
         let item = NSMenuItem()
         item.attributedTitle = attributed
         item.image = icon
         item.isEnabled = isEnabled
-        
+
         if let icon {
             if !isEnabled {
                 item.image = tintedImage(icon, color: .disabledControlTextColor)
-            } else if let maxPercent = usedPercents.max(), maxPercent >= 70 {
-                let iconColor: NSColor = maxPercent >= 90 ? .systemRed : .systemOrange
-                item.image = tintedImage(icon, color: iconColor)
+            } else {
+                let minRemaining = usedPercents.map { max(0.0, 100.0 - $0) }.min() ?? 100.0
+                if minRemaining <= 30 {
+                    let iconColor: NSColor = minRemaining <= 10 ? .systemRed : .systemOrange
+                    item.image = tintedImage(icon, color: iconColor)
+                }
             }
         }
-        
+
         return item
     }
     

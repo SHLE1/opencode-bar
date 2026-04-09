@@ -63,6 +63,7 @@
 		E11111111111111111111111 /* CopilotUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22222222222222222222222 /* CopilotUsage.swift */; };
 		E33333333333333333333334 /* UsageHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = E44444444444444444444444 /* UsageHistory.swift */; };
 		E92DAE297D071D146591E201 /* MultiProviderStatusBarIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24BD2AE5B12FABC3E915AE27 /* MultiProviderStatusBarIconView.swift */; };
+		1029825214ED3B7CE553FCD5 /* MultiProviderBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9EA46CE592EA35310CE940 /* MultiProviderBarView.swift */; };
 		F08C918116D7B3024B68C81A /* MenuDesignToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1C7C9FDB4600114F02B2915 /* MenuDesignToken.swift */; };
 		F11111111111111111111111 /* UsagePredictor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F22222222222222222222222 /* UsagePredictor.swift */; };
 		F35960B456C28D71BE7575A5 /* GeminiCLIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06EC3B683EB6892E4F9C8316 /* GeminiCLIProvider.swift */; };
@@ -142,6 +143,7 @@
 		0F6CE62C58ECA852F25FEF30 /* MenuResultBuilder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuResultBuilder.swift; sourceTree = "<group>"; };
 		18F40F1AC76A49A9B9DF74B0 /* ProviderManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProviderManager.swift; sourceTree = "<group>"; };
 		24BD2AE5B12FABC3E915AE27 /* MultiProviderStatusBarIconView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MultiProviderStatusBarIconView.swift; sourceTree = "<group>"; };
+		0B9EA46CE592EA35310CE940 /* MultiProviderBarView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MultiProviderBarView.swift; sourceTree = "<group>"; };
 		2707EF99248FCDEFDEE3DA9C /* BrowserCookieService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowserCookieService.swift; sourceTree = "<group>"; };
 		283349002F313176004DADE1 /* ChutesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChutesProvider.swift; sourceTree = "<group>"; };
 		2D2B4000E33060BA5E00351B /* DependencyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DependencyTests.swift; sourceTree = "<group>"; };
@@ -340,6 +342,7 @@
 				AD0CA52627AF05BD67B56E /* StatusBarIconView.swift */,
 				3FEE31A8C4560737353C8578 /* SwiftUI */,
 				24BD2AE5B12FABC3E915AE27 /* MultiProviderStatusBarIconView.swift */,
+				0B9EA46CE592EA35310CE940 /* MultiProviderBarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -638,6 +641,7 @@
 				6E20731420660405A73659A3 /* ModernApp.swift in Sources */,
 				CB4724DEB2377B892281E8CD /* ModernStatusBarIconView.swift in Sources */,
 				E92DAE297D071D146591E201 /* MultiProviderStatusBarIconView.swift in Sources */,
+				1029825214ED3B7CE553FCD5 /* MultiProviderBarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

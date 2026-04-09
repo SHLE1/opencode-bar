@@ -91,12 +91,14 @@ enum MenuBarDisplayMode: Int, CaseIterable {
     case totalCost = 0
     case iconOnly = 1
     case onlyShow = 2
+    case multiProvider = 3
 
     var title: String {
         switch self {
         case .totalCost: return "Total Cost"
         case .iconOnly: return "Icon Only"
         case .onlyShow: return "Only Show"
+        case .multiProvider: return "Multi-Provider Bar"
         }
     }
 
@@ -127,6 +129,7 @@ enum StatusBarDisplayPreferences {
     static let showAlertFirstKey = "statusBarDisplay.showAlertFirst"
     static let criticalBadgeKey = "statusBarDisplay.criticalBadge"
     static let showProviderNameKey = "statusBarDisplay.showProviderName"
+    static let multiProviderProvidersKey = "statusBarDisplay.multiProviderProviders"
 }
 
 enum SearchEnginePreferences {

@@ -97,11 +97,11 @@ Quit (⌘Q)
 - **Terminology (MUST use these names)**:
   - **Status Bar Percent**: Single representative percentage shown in macOS top status bar text
   - **Dropdown Detail Percents**: Multi-window percentages shown inside provider rows in the opened dropdown menu
-- **Prefer to use 'used' instead of 'left'**: Prefer to use percentage is "used" instead of "left/remaining"
-  - ✅ `3h: 75% used`
-  - ❌ `23%` (ambiguous - is it used or remaining?)
-    - But this is allowed when the display needs to be very compact
-  - ❌ `23% remaining`
+- **Prefer to use 'left' in Quota Status dropdown**: In the Quota Status dropdown menu, display remaining percentage (not used)
+  - ✅ `Claude: 25% left`
+  - ✅ `23%` is allowed when the display needs to be very compact
+  - ❌ `Claude: 75% used` (avoid "used" framing in Quota Status rows)
+  - Note: Color thresholds are also inverted — red/orange means *low remaining*, not high usage
 - **Specify time**: Always include time component when displaying quota with time limits
   - ✅ `5h: 60% used`
   - ❌ `Primary: 75%` (ambiguous - what's Primary?)
@@ -129,9 +129,10 @@ Quit (⌘Q)
   - Example: `Codex: 0%, 100%, 3%, 50%` where 0% is 5h usage, 100% is 7d usage, 3% is 5h Spark usage, 50% is 7d Spark usage
   - Each percentage is individually colored based on thresholds  
 
-### Status Bar Icon Rules (IMMUTABLE)
-- **Primary Icon Must Stay Visible**: The original OpenCode Bar status icon is always rendered in the macOS status bar.
-- **Provider Icon Is Additive**: Provider identity is shown as an extra icon beside the primary icon, never as a replacement for the primary icon.
+### Status Bar Icon Rules
+- **Primary Icon Must Stay Visible** (default modes): In `Icon Only`, `Total Cost`, and `Only Show` modes, the original OpenCode Bar status icon is always rendered in the macOS status bar.
+- **Provider Icon Is Additive** (default modes): In the above modes, provider identity is shown as an extra icon beside the primary icon, never as a replacement.
+- **Multi-Provider Bar mode (EXCEPTION)**: When `menuBarDisplayMode == .multiProvider`, the primary icon is hidden entirely. The status bar shows only a horizontal sequence of `[provider icon][remaining%]` pairs for user-selected providers. No primary icon is shown in this mode. This is a deliberate exception approved by the user.
 - **Settings Label**: The status bar settings label must use `Show Provider Icon` (not provider-name text wording).
 - **Gemini Icon Scale**: Gemini icon should be slightly larger than default provider icons to match official visual balance.
   - Menu/icon token reference: `MenuDesignToken.Dimension.geminiIconSize`
