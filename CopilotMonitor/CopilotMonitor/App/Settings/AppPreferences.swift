@@ -17,6 +17,7 @@ final class AppPreferences: ObservableObject {
     static let criticalBadgeDidChange = Notification.Name("AppPreferences.criticalBadgeDidChange")
     static let showProviderIconDidChange = Notification.Name("AppPreferences.showProviderIconDidChange")
     static let multiProviderProvidersDidChange = Notification.Name("AppPreferences.multiProviderProvidersDidChange")
+    static let codexStatusBarAccountDidChange = Notification.Name("AppPreferences.codexStatusBarAccountDidChange")
     static let subscriptionDidChange = Notification.Name("AppPreferences.subscriptionDidChange")
     static let copilotAddOnDidChange = Notification.Name("AppPreferences.copilotAddOnDidChange")
 
@@ -99,6 +100,13 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    @Published var codexStatusBarAccountSelectionKey: String? {
+        didSet {
+            defaults.set(codexStatusBarAccountSelectionKey, forKey: "provider.codex.statusBarAccountSelectionKey")
+            NotificationCenter.default.post(name: Self.codexStatusBarAccountDidChange, object: nil)
+        }
+    }
+
     // MARK: - Copilot Add-on
 
     @Published var copilotAddOnEnabled: Bool {
@@ -170,6 +178,10 @@ final class AppPreferences: ObservableObject {
         } else {
             self.multiProviderProviders = Set(ProviderIdentifier.allCases)
         }
+
+        self.codexStatusBarAccountSelectionKey = UserDefaults.standard.string(
+            forKey: "provider.codex.statusBarAccountSelectionKey"
+        )
 
         if UserDefaults.standard.object(forKey: "provider.copilot_add_on.enabled") != nil {
             self.copilotAddOnEnabled = UserDefaults.standard.bool(forKey: "provider.copilot_add_on.enabled")

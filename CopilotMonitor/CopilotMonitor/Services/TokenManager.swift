@@ -1810,6 +1810,37 @@ final class TokenManager: @unchecked Sendable {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    func codexStatusBarSelectionKey(
+        email: String?,
+        accountId: String?,
+        externalUsageAccountId: String?,
+        authSource: String,
+        index: Int
+    ) -> String {
+        if let normalizedEmail = normalizedNonEmpty(email)?.lowercased() {
+            return "email:\(normalizedEmail)"
+        }
+        if let normalizedAccountId = normalizedNonEmpty(accountId) {
+            return "account:\(normalizedAccountId)"
+        }
+        if let normalizedExternalUsageAccountId = normalizedNonEmpty(externalUsageAccountId) {
+            return "external:\(normalizedExternalUsageAccountId)"
+        }
+
+        let normalizedSource = normalizedNonEmpty(authSource) ?? "unknown"
+        return "source:\(normalizedSource)#\(index)"
+    }
+
+    func codexStatusBarSelectionKey(for account: OpenAIAuthAccount, index: Int) -> String {
+        codexStatusBarSelectionKey(
+            email: account.email,
+            accountId: account.accountId,
+            externalUsageAccountId: account.externalUsageAccountId,
+            authSource: account.authSource,
+            index: index
+        )
+    }
+
     private struct ResolvedOpenAIAuthMetadata {
         let accountId: String?
         let overrideAccountId: String?

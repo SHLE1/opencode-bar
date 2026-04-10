@@ -263,6 +263,15 @@ final class StatusBarController: NSObject {
         }
     }
 
+    private var codexStatusBarAccountSelectionKey: String? {
+        get {
+            AppPreferences.shared.codexStatusBarAccountSelectionKey
+        }
+        set {
+            AppPreferences.shared.codexStatusBarAccountSelectionKey = newValue
+        }
+    }
+
     private func isProviderInMultiBar(_ identifier: ProviderIdentifier) -> Bool {
         multiProviderSelection.contains(identifier)
     }
@@ -581,6 +590,12 @@ final class StatusBarController: NSObject {
         updateStatusBarText()
     }
 
+    @objc private func codexStatusBarAccountSelected(_ sender: NSMenuItem) {
+        guard let selectionKey = sender.representedObject as? String else { return }
+        codexStatusBarAccountSelectionKey = selectionKey
+        debugLog("codexStatusBarAccountSelected: selectionKey=\(selectionKey)")
+    }
+
     @objc private func toggleCriticalBadge(_ sender: NSMenuItem) {
         criticalBadgeEnabled.toggle()
         debugLog("toggleCriticalBadge: value=\(criticalBadgeEnabled)")
@@ -688,6 +703,10 @@ final class StatusBarController: NSObject {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleMultiProviderProvidersChange),
             name: AppPreferences.multiProviderProvidersDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleCodexStatusBarAccountChange),
+            name: AppPreferences.codexStatusBarAccountDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleSubscriptionChange),
@@ -996,12 +1015,137 @@ final class StatusBarController: NSObject {
             .max()
     }
 
+    private func codexSelectionKey(for account: ProviderAccountResult) -> String {
+        if let selectionKey = account.selectionKey?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !selectionKey.isEmpty {
+            return selectionKey
+        }
+
+        return TokenManager.shared.codexStatusBarSelectionKey(
+            email: account.details?.email,
+            accountId: account.accountId,
+            externalUsageAccountId: nil,
+            authSource: account.details?.authSource ?? "",
+            index: account.accountIndex
+        )
+    }
+
+    private func resolvedCodexStatusBarAccount(from result: ProviderResult, persistCorrection: Bool = true) -> ProviderAccountResult? {
+        guard let accounts = result.accounts, !accounts.isEmpty else {
+            if persistCorrection, codexStatusBarAccountSelectionKey != nil {
+                codexStatusBarAccountSelectionKey = nil
+            }
+            return nil
+        }
+
+        let savedSelectionKey = codexStatusBarAccountSelectionKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let savedSelectionKey, !savedSelectionKey.isEmpty,
+           let selectedAccount = accounts.first(where: { codexSelectionKey(for: $0) == savedSelectionKey })
+        {
+            return selectedAccount
+        }
+
+        let fallbackAccount = accounts[0]
+        let fallbackSelectionKey = codexSelectionKey(for: fallbackAccount)
+        if persistCorrection, codexStatusBarAccountSelectionKey != fallbackSelectionKey {
+            codexStatusBarAccountSelectionKey = fallbackSelectionKey
+            debugLog("resolvedCodexStatusBarAccount: corrected selection to \(fallbackSelectionKey)")
+        }
+        return fallbackAccount
+    }
+
+    private func codexStatusBarSelectionDisplayName(
+        for account: ProviderAccountResult,
+        allAccounts: [ProviderAccountResult]
+    ) -> String {
+        let normalizedEmail = account.details?.email?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let emailDisplayName = normalizedEmail?.isEmpty == false ? normalizedEmail : nil
+
+        guard allAccounts.count > 1 else {
+            return emailDisplayName
+                ?? account.accountId?.trimmingCharacters(in: .whitespacesAndNewlines)
+                ?? "Account #\(account.accountIndex + 1)"
+        }
+
+        let emailCount = allAccounts.reduce(into: [String: Int]()) { counts, other in
+            let key = other.details?.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            guard !key.isEmpty else { return }
+            counts[key, default: 0] += 1
+        }
+
+        if let emailDisplayName {
+            let emailKey = emailDisplayName.lowercased()
+            if emailCount[emailKey, default: 0] > 1 {
+                if let accountId = account.accountId?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !accountId.isEmpty {
+                    return "\(emailDisplayName) (\(accountId))"
+                }
+                if let authSource = authSourceLabel(for: account.details?.authSource, provider: .codex),
+                   !authSource.isEmpty {
+                    return "\(emailDisplayName) (\(authSource))"
+                }
+            }
+            return emailDisplayName
+        }
+
+        if let accountId = account.accountId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !accountId.isEmpty {
+            return "Account \(accountId)"
+        }
+        if let authSource = authSourceLabel(for: account.details?.authSource, provider: .codex),
+           !authSource.isEmpty {
+            return authSource
+        }
+        return "Account #\(account.accountIndex + 1)"
+    }
+
+    func makeCodexStatusBarAccountMenuItem() -> NSMenuItem? {
+        guard let result = providerResults[.codex],
+              let accounts = result.accounts,
+              accounts.count > 1 else {
+            return nil
+        }
+
+        let selectedAccount = resolvedCodexStatusBarAccount(from: result, persistCorrection: false)
+        let selectedSelectionKey = selectedAccount.map { codexSelectionKey(for: $0) }
+
+        let item = NSMenuItem(title: "Status Bar Account", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+
+        for account in accounts {
+            let selectionKey = codexSelectionKey(for: account)
+            let title = codexStatusBarSelectionDisplayName(for: account, allAccounts: accounts)
+            let accountItem = NSMenuItem(
+                title: title,
+                action: #selector(codexStatusBarAccountSelected(_:)),
+                keyEquivalent: ""
+            )
+            accountItem.target = self
+            accountItem.representedObject = selectionKey
+            accountItem.state = selectionKey == selectedSelectionKey ? .on : .off
+            submenu.addItem(accountItem)
+        }
+
+        item.submenu = submenu
+        return item
+    }
+
     /// Collects all UsagePercentCandidates from all accounts for a provider,
     /// then applies the global priority rule: pick the highest-priority window
     /// across ALL accounts, then return the max percent within that window.
     /// This prevents a high hourly value from one account beating a lower weekly
     /// value from another account.
     private func preferredUsedPercentForStatusBar(identifier: ProviderIdentifier, result: ProviderResult) -> Double? {
+        if identifier == .codex,
+           let selectedAccount = resolvedCodexStatusBarAccount(from: result) {
+            return preferredUsedPercent(
+                identifier: identifier,
+                usage: selectedAccount.usage,
+                details: selectedAccount.details
+            ) ?? normalizedUsagePercent(selectedAccount.usage.usagePercentage)
+        }
+
         var allCandidates: [UsagePercentCandidate] = []
 
         // Main result candidates
@@ -1071,9 +1215,13 @@ final class StatusBarController: NSObject {
             }
         }
 
-        appendMetrics(usage: result.usage, details: result.details)
+        if identifier != .codex {
+            appendMetrics(usage: result.usage, details: result.details)
+        }
 
-        if let accounts = result.accounts {
+        if identifier == .codex, let selectedAccount = resolvedCodexStatusBarAccount(from: result) {
+            appendMetrics(usage: selectedAccount.usage, details: selectedAccount.details)
+        } else if let accounts = result.accounts {
             for account in accounts {
                 appendMetrics(usage: account.usage, details: account.details)
             }
@@ -3325,6 +3473,12 @@ final class StatusBarController: NSObject {
         debugLog("🔔 Settings: multiProviderProviders changed")
         updateStatusBarDisplayMenuState()
         updateStatusBarText()
+    }
+
+    @objc private func handleCodexStatusBarAccountChange() {
+        debugLog("🔔 Settings: codexStatusBarAccount changed")
+        updateStatusBarText()
+        updateMultiProviderMenu()
     }
 
     @objc private func handleSubscriptionChange() {

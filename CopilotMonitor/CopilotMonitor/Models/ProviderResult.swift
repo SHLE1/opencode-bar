@@ -40,6 +40,21 @@ struct ProviderAccountResult {
     let accountId: String?
     let usage: ProviderUsage
     let details: DetailedUsage?
+    let selectionKey: String?
+
+    init(
+        accountIndex: Int,
+        accountId: String?,
+        usage: ProviderUsage,
+        details: DetailedUsage?,
+        selectionKey: String? = nil
+    ) {
+        self.accountIndex = accountIndex
+        self.accountId = accountId
+        self.usage = usage
+        self.details = details
+        self.selectionKey = selectionKey
+    }
 
     /// Stable identifier for subscription key derivation.
     /// Prefers email over accountId because email is invariant across API

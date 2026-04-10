@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import OpenCode_Bar
+@testable import UsageBar
 
 final class MenuResultBuilderTests: XCTestCase {
     

@@ -308,9 +308,9 @@ final class CodexProvider: ProviderProtocol {
         }
 
         var candidates: [CodexAccountCandidate] = []
-        for account in accounts {
+        for (index, account) in accounts.enumerated() {
             do {
-                let candidate = try await fetchUsageForAccount(account)
+                let candidate = try await fetchUsageForAccount(account, index: index)
                 candidates.append(candidate)
             } catch {
                 logger.warning("Codex account fetch failed (\(account.authSource)): \(error.localizedDescription)")
@@ -338,7 +338,8 @@ final class CodexProvider: ProviderProtocol {
                 accountIndex: index,
                 accountId: candidate.accountId,
                 usage: candidate.usage,
-                details: candidate.details
+                details: candidate.details,
+                selectionKey: candidate.selectionKey
             )
         }
 
@@ -358,6 +359,7 @@ final class CodexProvider: ProviderProtocol {
         let details: DetailedUsage
         let sourceLabels: [String]
         let source: OpenAIAuthSource
+        let selectionKey: String
     }
 
     private func sourcePriority(_ source: OpenAIAuthSource) -> Int {
@@ -422,11 +424,12 @@ final class CodexProvider: ProviderProtocol {
             usage: primary.usage,
             details: mergedDetails,
             sourceLabels: mergedLabels,
-            source: primary.source
+            source: primary.source,
+            selectionKey: primary.selectionKey
         )
     }
 
-    private func fetchUsageForAccount(_ account: OpenAIAuthAccount) async throws -> CodexAccountCandidate {
+    private func fetchUsageForAccount(_ account: OpenAIAuthAccount, index: Int) async throws -> CodexAccountCandidate {
         let endpointConfiguration = TokenManager.shared.getCodexEndpointConfiguration()
         let url = try codexUsageURL(for: endpointConfiguration, account: account)
 
@@ -465,7 +468,8 @@ final class CodexProvider: ProviderProtocol {
             usage: decodedPayload.usage,
             details: decodedPayload.details,
             sourceLabels: account.sourceLabels.isEmpty ? [sourceLabel(account.source)] : account.sourceLabels,
-            source: account.source
+            source: account.source,
+            selectionKey: TokenManager.shared.codexStatusBarSelectionKey(for: account, index: index)
         )
     }
 

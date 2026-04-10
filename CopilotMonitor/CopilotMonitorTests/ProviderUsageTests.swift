@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenCode_Bar
+@testable import UsageBar
 
 /// Basic test suite for provider usage models and fixtures
 final class ProviderUsageTests: XCTestCase {

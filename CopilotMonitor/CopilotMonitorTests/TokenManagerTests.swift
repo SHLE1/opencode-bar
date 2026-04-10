@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenCode_Bar
+@testable import UsageBar
 
 final class TokenManagerTests: XCTestCase {
 
@@ -225,6 +225,54 @@ final class TokenManagerTests: XCTestCase {
         XCTAssertEqual(auth.openai?.accountIdSource, "org")
         XCTAssertEqual(auth.openai?.accountLabel, "Personal [id:abc123]")
         XCTAssertEqual(auth.openai?.multiAccount, true)
+    }
+
+    func testCodexStatusBarSelectionKeyPrefersEmail() {
+        let key = TokenManager.shared.codexStatusBarSelectionKey(
+            email: "User@Example.com ",
+            accountId: "account-123",
+            externalUsageAccountId: "external-456",
+            authSource: "/tmp/auth.json",
+            index: 7
+        )
+
+        XCTAssertEqual(key, "email:user@example.com")
+    }
+
+    func testCodexStatusBarSelectionKeyFallsBackToAccountId() {
+        let key = TokenManager.shared.codexStatusBarSelectionKey(
+            email: nil,
+            accountId: "account-123",
+            externalUsageAccountId: "external-456",
+            authSource: "/tmp/auth.json",
+            index: 7
+        )
+
+        XCTAssertEqual(key, "account:account-123")
+    }
+
+    func testCodexStatusBarSelectionKeyFallsBackToExternalUsageAccountId() {
+        let key = TokenManager.shared.codexStatusBarSelectionKey(
+            email: nil,
+            accountId: nil,
+            externalUsageAccountId: "external-456",
+            authSource: "/tmp/auth.json",
+            index: 7
+        )
+
+        XCTAssertEqual(key, "external:external-456")
+    }
+
+    func testCodexStatusBarSelectionKeyFallsBackToSourceAndIndex() {
+        let key = TokenManager.shared.codexStatusBarSelectionKey(
+            email: nil,
+            accountId: nil,
+            externalUsageAccountId: nil,
+            authSource: "/tmp/auth.json",
+            index: 7
+        )
+
+        XCTAssertEqual(key, "source:/tmp/auth.json#7")
     }
 
     func testReadClaudeAnthropicAuthFilesIncludesDisabledAccounts() throws {

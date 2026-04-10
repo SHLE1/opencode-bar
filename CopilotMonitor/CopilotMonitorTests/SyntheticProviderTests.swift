@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenCode_Bar
+@testable import UsageBar
 
 final class SyntheticProviderTests: XCTestCase {
     private final class MockURLProtocol: URLProtocol {
