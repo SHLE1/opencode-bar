@@ -42,4 +42,5 @@ package-lock.json
 
 # Local runtime artifacts
 data/
+plans/
 nohup.out
