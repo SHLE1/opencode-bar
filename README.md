@@ -50,8 +50,6 @@ Download the latest `.dmg` file from the [**Releases**](https://github.com/opggi
 | **Kimi for Coding (Kimi K2.5)** | Quota-based | Usage limits, membership level, reset time |
 | **MiniMax Coding Plan** | Quota-based | 5h/weekly quotas, Anthropic-style dual-window submenu, OpenCode auth |
 | **Z.AI Coding Plan** | Quota-based | Token/MCP quotas, model usage, tool usage (24h) |
-| **Brave Search** | Quota-based | Monthly search quota, reset schedule |
-| **Tavily** | Quota-based | Monthly search quota, plan usage |
 | **Synthetic** | Quota-based | 5h usage limit, request limits, reset time |
 | **Antigravity** | Quota-based | Local cache reverse parsing (`state.vscdb`), no localhost dependency |
 | **Chutes AI** | Quota-based | Daily quota limits (300/2000/5000), credits balance |

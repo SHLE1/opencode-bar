@@ -15,7 +15,7 @@ struct ModernApp: App {
         .menuBarExtraStyle(.menu)
         
         Settings {
-            EmptyView()
+            SettingsView()
         }
     }
 }

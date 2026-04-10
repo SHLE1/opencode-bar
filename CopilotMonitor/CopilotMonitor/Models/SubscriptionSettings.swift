@@ -167,8 +167,6 @@ struct ProviderSubscriptionPresets {
     static let openRouter: [SubscriptionPreset] = []
     static let openCode: [SubscriptionPreset] = []
     static let openCodeZen: [SubscriptionPreset] = []
-    static let tavilySearch: [SubscriptionPreset] = []
-    static let braveSearch: [SubscriptionPreset] = []
 
     static func presets(for provider: ProviderIdentifier) -> [SubscriptionPreset] {
         switch provider {
@@ -192,10 +190,6 @@ struct ProviderSubscriptionPresets {
             return openCode
         case .openCodeZen:
             return openCodeZen
-        case .tavilySearch:
-            return tavilySearch
-        case .braveSearch:
-            return braveSearch
         case .zaiCodingPlan:
             return zaiCodingPlan
         case .nanoGpt:

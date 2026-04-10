@@ -163,18 +163,6 @@ final class StatusBarController: NSObject {
         }
     }
 
-    private var braveRefreshMode: BraveSearchRefreshMode {
-        get {
-            let rawValue = UserDefaults.standard.integer(forKey: SearchEnginePreferences.braveRefreshModeKey)
-            return BraveSearchRefreshMode(rawValue: rawValue) ?? .defaultMode
-        }
-        set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: SearchEnginePreferences.braveRefreshModeKey)
-            debugLog("braveRefreshMode updated: \(newValue.title)")
-            refreshClicked()
-        }
-    }
-
     private var predictionPeriod: PredictionPeriod {
         get {
             let rawValue = UserDefaults.standard.integer(forKey: "predictionPeriod")
@@ -285,8 +273,6 @@ final class StatusBarController: NSObject {
 
         TokenManager.shared.logDebugEnvironmentInfo()
         debugLog("Environment debug info logged")
-
-        ensureBraveRefreshModeDefault()
 
         setupStatusItem()
         debugLog("setupStatusItem completed")
@@ -424,8 +410,8 @@ final class StatusBarController: NSObject {
         checkForUpdatesItem.target = NSApp.delegate
         menu.addItem(checkForUpdatesItem)
 
-        let refreshIntervalItem = NSMenuItem(title: "Auto Refresh", action: nil, keyEquivalent: "")
-        refreshIntervalItem.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Auto Refresh")
+        // Auto Refresh and Status Bar Options moved to Settings window.
+        // Keep internal menus allocated but hidden to avoid nil reference crashes.
         refreshIntervalMenu = NSMenu()
         for interval in RefreshInterval.allCases {
             let item = NSMenuItem(title: interval.title, action: #selector(refreshIntervalSelected(_:)), keyEquivalent: "")
@@ -433,16 +419,8 @@ final class StatusBarController: NSObject {
             item.tag = interval.rawValue
             refreshIntervalMenu.addItem(item)
         }
-        refreshIntervalItem.submenu = refreshIntervalMenu
-        menu.addItem(refreshIntervalItem)
         updateRefreshIntervalMenu()
 
-        let statusBarOptionsItem = NSMenuItem(title: "Status Bar Options", action: nil, keyEquivalent: "")
-        statusBarOptionsItem.image = NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: "Status Bar Options")
-        let statusBarOptionsMenu = NSMenu()
-
-        let displayModeItem = NSMenuItem(title: "Menu Bar Display", action: nil, keyEquivalent: "")
-        displayModeItem.image = NSImage(systemSymbolName: "textformat.size", accessibilityDescription: "Menu Bar Display")
         menuBarDisplayModeMenu = NSMenu()
         multiProviderBarMenu = menuBarDisplayModeMenu
         for identifier in ProviderIdentifier.allCases {
@@ -455,11 +433,7 @@ final class StatusBarController: NSObject {
             providerItem.representedObject = identifier.rawValue
             menuBarDisplayModeMenu.addItem(providerItem)
         }
-        displayModeItem.submenu = menuBarDisplayModeMenu
-        statusBarOptionsMenu.addItem(displayModeItem)
 
-        let enabledProvidersItem = NSMenuItem(title: "Enabled Providers", action: nil, keyEquivalent: "")
-        enabledProvidersItem.image = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle", accessibilityDescription: "Enabled Providers")
         enabledProvidersMenu = NSMenu()
         for identifier in ProviderIdentifier.allCases {
             let providerItem = NSMenuItem(
@@ -471,21 +445,15 @@ final class StatusBarController: NSObject {
             providerItem.representedObject = identifier.rawValue
             enabledProvidersMenu.addItem(providerItem)
         }
-        enabledProvidersItem.submenu = enabledProvidersMenu
-        statusBarOptionsMenu.addItem(enabledProvidersItem)
-
-        statusBarOptionsMenu.addItem(NSMenuItem.separator())
 
         criticalBadgeMenuItem = NSMenuItem(title: "Critical Badge", action: #selector(toggleCriticalBadge(_:)), keyEquivalent: "")
         criticalBadgeMenuItem.target = self
-        statusBarOptionsMenu.addItem(criticalBadgeMenuItem)
+        criticalBadgeMenuItem.isHidden = true
 
         showProviderNameMenuItem = NSMenuItem(title: "Show Provider Icon", action: #selector(toggleShowProviderName(_:)), keyEquivalent: "")
         showProviderNameMenuItem.target = self
-        statusBarOptionsMenu.addItem(showProviderNameMenuItem)
+        showProviderNameMenuItem.isHidden = true
 
-        statusBarOptionsItem.submenu = statusBarOptionsMenu
-        menu.addItem(statusBarOptionsItem)
         updateEnabledProvidersMenu()
         updateStatusBarDisplayMenuState()
 
@@ -500,17 +468,23 @@ final class StatusBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Launch at Login and CLI are now in Settings window — keep items allocated but hidden
         launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(launchAtLoginClicked), keyEquivalent: "")
-        launchAtLoginItem.image = NSImage(systemSymbolName: "power", accessibilityDescription: "Launch at Login")
+        launchAtLoginItem.isHidden = true
         launchAtLoginItem.target = self
         updateLaunchAtLoginState()
         menu.addItem(launchAtLoginItem)
 
         installCLIItem = NSMenuItem(title: "Install CLI (opencodebar)", action: #selector(installCLIClicked), keyEquivalent: "")
-        installCLIItem.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Install CLI")
+        installCLIItem.isHidden = true
         installCLIItem.target = self
         menu.addItem(installCLIItem)
         updateCLIInstallState()
+
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(AppDelegate.openSettingsWindow), keyEquivalent: ",")
+        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Settings")
+        settingsItem.target = NSApp.delegate
+        menu.addItem(settingsItem)
 
         let shareSnapshotItem = NSMenuItem(title: "Share Usage Snapshot...", action: #selector(shareUsageSnapshotClicked), keyEquivalent: "")
         shareSnapshotItem.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Share Usage Snapshot")
@@ -561,25 +535,9 @@ final class StatusBarController: NSObject {
         }
     }
 
-    private func ensureBraveRefreshModeDefault() {
-        if UserDefaults.standard.object(forKey: SearchEnginePreferences.braveRefreshModeKey) == nil {
-            UserDefaults.standard.set(
-                BraveSearchRefreshMode.eventOnly.rawValue,
-                forKey: SearchEnginePreferences.braveRefreshModeKey
-            )
-            debugLog("braveRefreshMode default initialized: \(BraveSearchRefreshMode.eventOnly.title)")
-        }
-    }
-
     @objc private func refreshIntervalSelected(_ sender: NSMenuItem) {
         if let interval = RefreshInterval(rawValue: sender.tag) {
             refreshInterval = interval
-        }
-    }
-
-    @objc private func braveRefreshModeSelected(_ sender: NSMenuItem) {
-        if let mode = BraveSearchRefreshMode(rawValue: sender.tag) {
-            braveRefreshMode = mode
         }
     }
 
@@ -669,6 +627,13 @@ final class StatusBarController: NSObject {
         return UserDefaults.standard.bool(forKey: key)
     }
 
+    private var isCopilotAddOnEnabled: Bool {
+        if UserDefaults.standard.object(forKey: "provider.copilot_add_on.enabled") == nil {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: "provider.copilot_add_on.enabled")
+    }
+
     @objc private func toggleProvider(_ sender: NSMenuItem) {
         guard let idString = sender.representedObject as? String,
               let identifier = ProviderIdentifier(rawValue: idString) else { return }
@@ -695,7 +660,43 @@ final class StatusBarController: NSObject {
     }
 
     private func setupNotificationObservers() {
-        // Keep this for future provider-specific observers.
+        // React to settings changes from the SwiftUI Settings window
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleRefreshIntervalChange),
+            name: AppPreferences.refreshIntervalDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handlePredictionPeriodChange),
+            name: AppPreferences.predictionPeriodDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleDisplayModeChange),
+            name: AppPreferences.displayModeDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleEnabledProvidersChange),
+            name: AppPreferences.enabledProvidersDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleCriticalBadgeChange),
+            name: AppPreferences.criticalBadgeDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleShowProviderIconChange),
+            name: AppPreferences.showProviderIconDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleMultiProviderProvidersChange),
+            name: AppPreferences.multiProviderProvidersDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleSubscriptionChange),
+            name: AppPreferences.subscriptionDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleCopilotAddOnChange),
+            name: AppPreferences.copilotAddOnDidChange, object: nil
+        )
     }
 
     private func startRefreshTimer() {
@@ -850,7 +851,7 @@ final class StatusBarController: NSObject {
     private func calculatePayAsYouGoTotal(providerResults: [ProviderIdentifier: ProviderResult], copilotUsage: CopilotUsage?) -> Double {
         var total = 0.0
 
-        if let copilot = copilotUsage {
+        if isCopilotAddOnEnabled, let copilot = copilotUsage {
             total += copilot.netBilledAmount
         }
 
@@ -971,8 +972,6 @@ final class StatusBarController: NSObject {
             add(dailyPercentFromDetails(details), priority: .daily)
         case .synthetic:
             add(details?.fiveHourUsage, priority: .hourly)
-        case .tavilySearch, .braveSearch:
-            add(details?.mcpUsagePercent, priority: .monthly)
         case .antigravity, .geminiCLI, .openRouter, .openCode, .openCodeZen:
             break
         }
@@ -1614,7 +1613,7 @@ final class StatusBarController: NSObject {
            }
 
             // Copilot Add-on (always show, even when $0.00)
-            if isProviderEnabled(.copilot) {
+            if isProviderEnabled(.copilot) && isCopilotAddOnEnabled {
                 if let copilotResult = providerResults[.copilot],
                    let details = copilotResult.details,
                    let overageCost = details.copilotOverageCost {
@@ -2198,18 +2197,6 @@ final class StatusBarController: NSObject {
             }
         }
 
-        if let searchEnginesItem = createSearchEnginesQuotaMenuItem() {
-            hasQuota = true
-            let separator = NSMenuItem.separator()
-            separator.tag = 999
-            menu.insertItem(separator, at: insertIndex)
-            insertIndex += 1
-
-            searchEnginesItem.tag = 999
-            menu.insertItem(searchEnginesItem, at: insertIndex)
-            insertIndex += 1
-        }
-
         if !hasQuota {
             let noItem = NSMenuItem()
             noItem.view = createDisabledLabelView(text: "No providers")
@@ -2687,175 +2674,6 @@ final class StatusBarController: NSObject {
         return submenu
     }
 
-    private func createSearchEnginesQuotaMenuItem() -> NSMenuItem? {
-        let enabledSearchProviders: [ProviderIdentifier] = [.braveSearch, .tavilySearch].filter { isProviderEnabled($0) }
-        let visibleSearchProviders = enabledSearchProviders.filter { identifier in
-            guard let errorMessage = lastProviderErrors[identifier] else { return true }
-            let shouldDisplay = shouldDisplayErrorMenuItem(errorMessage)
-            if !shouldDisplay {
-                debugLog("createSearchEnginesQuotaMenuItem: hiding \(identifier.displayName) because credentials are unavailable")
-            }
-            return shouldDisplay
-        }
-        guard !visibleSearchProviders.isEmpty else { return nil }
-
-        let searchEnginesItem = NSMenuItem(title: "Search Engines", action: nil, keyEquivalent: "")
-        searchEnginesItem.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search Engines")
-
-        let submenu = NSMenu()
-        for identifier in visibleSearchProviders {
-            let rowTitle = identifier.displayName
-            let rowItem = createSearchEngineRow(identifier: identifier, title: rowTitle)
-            submenu.addItem(rowItem)
-        }
-
-        searchEnginesItem.submenu = submenu
-        return searchEnginesItem
-    }
-
-    private func createSearchEngineRow(identifier: ProviderIdentifier, title: String) -> NSMenuItem {
-        let result = providerResults[identifier]
-        let errorMessage = lastProviderErrors[identifier]
-
-        if let errorMessage, shouldDisplayErrorStateEvenWithResult(errorMessage) {
-            let rowItem = NSMenuItem(title: "\(title) (Rate limited)", action: nil, keyEquivalent: "")
-            rowItem.image = tintedImage(iconForProvider(identifier), color: .disabledControlTextColor)
-            rowItem.isEnabled = false
-            return rowItem
-        }
-
-        if let result {
-            let rowItem = createNativeQuotaMenuItem(name: title, usedPercent: result.usage.usagePercentage, icon: iconForProvider(identifier))
-            rowItem.submenu = createSearchEngineDetailSubmenu(identifier: identifier, result: result, errorMessage: nil, isLoading: false)
-            return rowItem
-        }
-
-        if let errorMessage {
-            let rowItem = NSMenuItem(title: "\(title) (Error)", action: nil, keyEquivalent: "")
-            let status = errorMenuStatus(for: errorMessage)
-            let iconColor: NSColor = status.shouldDisableListItem ? .disabledControlTextColor : .systemOrange
-            rowItem.image = tintedImage(iconForProvider(identifier), color: iconColor)
-            rowItem.isEnabled = !status.shouldDisableListItem
-            if rowItem.isEnabled {
-                rowItem.submenu = createSearchEngineDetailSubmenu(identifier: identifier, result: nil, errorMessage: errorMessage, isLoading: false)
-            }
-            return rowItem
-        }
-
-        if loadingProviders.contains(identifier) {
-            let rowItem = NSMenuItem(title: "\(title) (Loading...)", action: nil, keyEquivalent: "")
-            rowItem.image = iconForProvider(identifier)
-            rowItem.submenu = createSearchEngineDetailSubmenu(identifier: identifier, result: nil, errorMessage: nil, isLoading: true)
-            return rowItem
-        }
-
-        let rowItem = NSMenuItem(title: "\(title) (No data)", action: nil, keyEquivalent: "")
-        rowItem.image = iconForProvider(identifier)
-        rowItem.submenu = createSearchEngineDetailSubmenu(identifier: identifier, result: nil, errorMessage: "No data", isLoading: false)
-        return rowItem
-    }
-
-    private func createSearchEngineDetailSubmenu(
-        identifier: ProviderIdentifier,
-        result: ProviderResult?,
-        errorMessage: String?,
-        isLoading: Bool
-    ) -> NSMenu {
-        let submenu = NSMenu()
-
-        if isLoading {
-            let loadingItem = NSMenuItem(title: "Loading...", action: nil, keyEquivalent: "")
-            loadingItem.isEnabled = false
-            submenu.addItem(loadingItem)
-            return submenu
-        }
-
-        if let errorMessage {
-            let errorItem = NSMenuItem()
-            errorItem.view = createDisabledLabelView(text: "Error: \(errorMessage)", multiline: true)
-            submenu.addItem(errorItem)
-            return submenu
-        }
-
-        guard let result,
-              case .quotaBased(let remaining, let entitlement, _) = result.usage,
-              entitlement > 0 else {
-            let emptyItem = NSMenuItem()
-            emptyItem.view = createDisabledLabelView(text: "Usage data unavailable")
-            submenu.addItem(emptyItem)
-            return submenu
-        }
-
-        let used = max(0, entitlement - remaining)
-        let usagePercent = (Double(used) / Double(entitlement)) * 100.0
-        let filledBlocks = min(10, Int((Double(used) / Double(max(entitlement, 1))) * 10))
-        let emptyBlocks = max(0, 10 - filledBlocks)
-        let progressBar = String(repeating: "═", count: filledBlocks) + String(repeating: "░", count: emptyBlocks)
-
-        let progressItem = NSMenuItem()
-        progressItem.view = createDisabledLabelView(text: "[\(progressBar)] \(used)/\(entitlement)")
-        submenu.addItem(progressItem)
-
-        let usedItem = NSMenuItem()
-        usedItem.view = createDisabledLabelView(text: String(format: "Used: %.0f%% used", usagePercent))
-        submenu.addItem(usedItem)
-
-        let remainingItem = NSMenuItem()
-        remainingItem.view = createDisabledLabelView(text: "Remaining: \(remaining)")
-        submenu.addItem(remainingItem)
-
-        if let resetPeriod = result.details?.resetPeriod, !resetPeriod.isEmpty {
-            let resetItem = NSMenuItem()
-            resetItem.view = createDisabledLabelView(text: resetPeriod)
-            submenu.addItem(resetItem)
-        }
-
-        if let planType = result.details?.planType, !planType.isEmpty {
-            let planItem = NSMenuItem()
-            planItem.view = createDisabledLabelView(text: "Plan: \(planType)")
-            submenu.addItem(planItem)
-        }
-
-        if let authSource = result.details?.authSource, !authSource.isEmpty {
-            submenu.addItem(NSMenuItem.separator())
-            let authItem = NSMenuItem()
-            authItem.view = createDisabledLabelView(
-                text: "Token From: \(authSource)",
-                icon: NSImage(systemSymbolName: "key", accessibilityDescription: "Auth Source"),
-                multiline: true
-            )
-            submenu.addItem(authItem)
-        }
-
-        if identifier == .braveSearch {
-            let lastSyncEpoch = UserDefaults.standard.double(forKey: SearchEnginePreferences.braveLastAPISyncAtKey)
-            if lastSyncEpoch > 0 {
-                let date = Date(timeIntervalSince1970: lastSyncEpoch)
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd HH:mm z"
-                formatter.timeZone = TimeZone.current
-                let syncItem = NSMenuItem()
-                syncItem.view = createDisabledLabelView(text: "Last API Sync: \(formatter.string(from: date))")
-                submenu.addItem(syncItem)
-            }
-
-            submenu.addItem(NSMenuItem.separator())
-            let modeItem = NSMenuItem(title: "Refresh Mode", action: nil, keyEquivalent: "")
-            let modeMenu = NSMenu()
-            for mode in BraveSearchRefreshMode.allCases {
-                let item = NSMenuItem(title: mode.title, action: #selector(braveRefreshModeSelected(_:)), keyEquivalent: "")
-                item.target = self
-                item.tag = mode.rawValue
-                item.state = (mode == braveRefreshMode) ? .on : .off
-                modeMenu.addItem(item)
-            }
-            modeItem.submenu = modeMenu
-            submenu.addItem(modeItem)
-        }
-
-        return submenu
-    }
-
     private func iconForProvider(_ identifier: ProviderIdentifier) -> NSImage? {
         var image: NSImage?
 
@@ -2888,10 +2706,6 @@ final class StatusBarController: NSObject {
             image = NSImage(named: "SyntheticIcon")
         case .chutes:
             image = NSImage(named: "ChutesIcon")
-        case .tavilySearch:
-            image = NSImage(named: "TavilyIcon")
-        case .braveSearch:
-            image = NSImage(named: "BraveSearchIcon")
         }
 
          // Keep consistent icon sizing and make Gemini slightly larger.
@@ -3349,7 +3163,8 @@ final class StatusBarController: NSObject {
             candidates.append((name: identifier.displayName, cost: cost))
         }
 
-        if isProviderEnabled(.copilot),
+        if isCopilotAddOnEnabled,
+           isProviderEnabled(.copilot),
            let copilotOverageCost = providerResults[.copilot]?.details?.copilotOverageCost,
            copilotOverageCost > 0 {
             candidates.append((name: "GitHub Copilot Add-on", cost: copilotOverageCost))
@@ -3467,6 +3282,62 @@ final class StatusBarController: NSObject {
         logger.info("⌨️ [Keyboard] ⌘Q Quit triggered")
         debugLog("⌨️ quitClicked: ⌘Q shortcut activated")
         NSApp.terminate(nil)
+    }
+
+    // MARK: - Settings notification handlers
+
+    @objc private func handleRefreshIntervalChange() {
+        debugLog("🔔 Settings: refreshInterval changed")
+        restartRefreshTimer()
+        updateRefreshIntervalMenu()
+    }
+
+    @objc private func handlePredictionPeriodChange() {
+        debugLog("🔔 Settings: predictionPeriod changed")
+        updatePredictionPeriodMenu()
+        updateHistorySubmenu()
+        updateMultiProviderMenu()
+    }
+
+    @objc private func handleDisplayModeChange() {
+        debugLog("🔔 Settings: displayMode changed")
+        updateStatusBarDisplayMenuState()
+        updateStatusBarText()
+    }
+
+    @objc private func handleEnabledProvidersChange() {
+        debugLog("🔔 Settings: enabledProviders changed")
+        updateEnabledProvidersMenu()
+        updateStatusBarDisplayMenuState()
+        updateStatusBarText()
+        refreshClicked()
+    }
+
+    @objc private func handleCriticalBadgeChange() {
+        debugLog("🔔 Settings: criticalBadge changed")
+        updateStatusBarText()
+    }
+
+    @objc private func handleShowProviderIconChange() {
+        debugLog("🔔 Settings: showProviderIcon changed")
+        updateStatusBarText()
+    }
+
+    @objc private func handleMultiProviderProvidersChange() {
+        debugLog("🔔 Settings: multiProviderProviders changed")
+        updateStatusBarDisplayMenuState()
+        updateStatusBarText()
+    }
+
+    @objc private func handleSubscriptionChange() {
+        debugLog("🔔 Settings: subscription changed")
+        updateMultiProviderMenu()
+    }
+
+    @objc private func handleCopilotAddOnChange() {
+        debugLog("🔔 Settings: Copilot Add-on toggled")
+        updateMultiProviderMenu()
+        updateStatusBarText()
     }
 
     @objc private func launchAtLoginClicked() {
@@ -3627,8 +3498,8 @@ final class StatusBarController: NSObject {
         // Collect daily cost data from all Pay-as-you-go providers
         var aggregatedDailyCosts: [Date: [ProviderIdentifier: Double]] = [:]
 
-        // 1. Copilot Add-on history
-        if let history = usageHistory {
+        // 1. Copilot Add-on history (only when add-on is enabled)
+        if isCopilotAddOnEnabled, let history = usageHistory {
             for day in history.days {
                 let dateKey = Calendar.current.startOfDay(for: day.date)
                 if aggregatedDailyCosts[dateKey] == nil {
@@ -3856,7 +3727,7 @@ final class StatusBarController: NSObject {
             historySubmenu.addItem(monthlyItem)
             debugLog("updateHistorySubmenu: monthlyItem added")
 
-            if prediction.predictedBilledAmount > 0 {
+            if isCopilotAddOnEnabled && prediction.predictedBilledAmount > 0 {
                 let costText = String(format: "Predicted Add-on: $%.2f", prediction.predictedBilledAmount)
                 let costItem = NSMenuItem()
                 costItem.view = createDisabledLabelView(

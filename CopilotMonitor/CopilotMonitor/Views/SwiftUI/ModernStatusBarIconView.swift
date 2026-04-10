@@ -85,21 +85,7 @@ struct SwiftUIProviderAlertView: View {
 
     @ViewBuilder
     private func iconView(for identifier: ProviderIdentifier) -> some View {
-        if identifier == .tavilySearch {
-            Image("TavilyIcon")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 12, height: 12)
-                .foregroundColor(.red)
-        } else if identifier == .braveSearch {
-            Image("BraveSearchIcon")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 12, height: 12)
-                .foregroundColor(.red)
-        } else if identifier == .minimaxCodingPlan {
+        if identifier == .minimaxCodingPlan {
             Image("MinimaxIcon")
                 .renderingMode(.template)
                 .resizable()
@@ -128,8 +114,6 @@ struct SwiftUIProviderAlertView: View {
         case .nanoGpt: return "n.circle"
         case .synthetic: return "diamond"
         case .chutes: return "c.circle"
-        case .tavilySearch: return "magnifyingglass"
-        case .braveSearch: return "b.circle"
         }
     }
 }

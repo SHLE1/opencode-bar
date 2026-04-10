@@ -24,8 +24,6 @@ enum ProviderIdentifier: String, CaseIterable {
     case nanoGpt = "nano_gpt"
     case synthetic
     case chutes
-    case tavilySearch = "tavily_search"
-    case braveSearch = "brave_search"
 
     var displayName: String {
         switch self {
@@ -57,10 +55,6 @@ enum ProviderIdentifier: String, CaseIterable {
             return "Synthetic"
         case .chutes:
             return "Chutes AI"
-        case .tavilySearch:
-            return "Tavily"
-        case .braveSearch:
-            return "Brave Search"
         }
     }
 
@@ -94,10 +88,6 @@ enum ProviderIdentifier: String, CaseIterable {
             return "Synth"
         case .chutes:
             return "Chutes"
-        case .tavilySearch:
-            return "Tavily"
-        case .braveSearch:
-            return "Brave"
         }
     }
 
@@ -131,10 +121,6 @@ enum ProviderIdentifier: String, CaseIterable {
             return "SyntheticIcon"
         case .chutes:
             return "c.circle"
-        case .tavilySearch:
-            return "TavilyIcon"
-        case .braveSearch:
-            return "BraveSearchIcon"
         }
     }
 }

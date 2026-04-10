@@ -158,10 +158,6 @@ final class MultiProviderStatusBarIconView: NSView {
             iconName = "SyntheticIcon"
         case .chutes:
             iconName = "c.circle"
-        case .tavilySearch:
-            iconName = "TavilyIcon"
-        case .braveSearch:
-            iconName = "BraveSearchIcon"
         }
 
         let icon: NSImage
