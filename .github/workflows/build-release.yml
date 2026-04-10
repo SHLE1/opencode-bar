@@ -357,3 +357,34 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Tap
+        env:
+          TAP_REPO_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG_NAME="UsageBar-${VERSION}.dmg"
+
+          if [ -z "$TAP_REPO_TOKEN" ]; then
+            echo "HOMEBREW_TAP_GITHUB_TOKEN is not set. Skipping tap update."
+            exit 0
+          fi
+
+          SHA256=$(shasum -a 256 "$DMG_NAME" | awk '{print $1}')
+
+          git clone "https://x-access-token:${TAP_REPO_TOKEN}@github.com/SHLE1/homebrew-tap.git" tap-repo
+          ruby -e '
+            file = "tap-repo/Casks/usage-bar.rb"
+            content = File.read(file)
+            version = ENV.fetch("VERSION").sub(/^v/, "")
+            sha = ENV.fetch("SHA256")
+            content.gsub!(/version ".*"/, "version \"#{version}\"")
+            content.gsub!(/sha256 ".*"/, "sha256 \"#{sha}\"")
+            File.write(file, content)
+          '
+
+          git -C tap-repo config user.name "github-actions[bot]"
+          git -C tap-repo config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C tap-repo add Casks/usage-bar.rb
+          git -C tap-repo commit -m "chore: update UsageBar cask to ${VERSION}" || exit 0
+          git -C tap-repo push origin HEAD
