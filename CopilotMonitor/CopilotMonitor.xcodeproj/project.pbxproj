@@ -39,6 +39,10 @@
 		LL1111111111111111111111 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = LF1111111111111111111111 /* L10n.swift */; };
 		ISO8601APP1111111111111 /* ISO8601DateParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = ISO8601FILE222222222222 /* ISO8601DateParsing.swift */; };
 		ISO8601CLI1111111111111 /* ISO8601DateParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = ISO8601FILE222222222222 /* ISO8601DateParsing.swift */; };
+		FLEXDECAPP111111111111 /* FlexibleDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FLEXDECFILE22222222222 /* FlexibleDecoder.swift */; };
+		FLEXDECCLI111111111111 /* FlexibleDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FLEXDECFILE22222222222 /* FlexibleDecoder.swift */; };
+		DBGLOGAPP1111111111111 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBGLOGFILE222222222222 /* DebugLogger.swift */; };
+		DBGLOGCLI1111111111111 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBGLOGFILE222222222222 /* DebugLogger.swift */; };
 		A55555555555555555555555 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A66666666666666666666666 /* Assets.xcassets */; };
 		AD95EBD6AE3134DF4C797577 /* ClaudeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DDC1B4DE6B5118CE4AE8F82 /* ClaudeProvider.swift */; };
 		AM1111111111111111111111 /* AppMigrationHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AM2222222222222222222222 /* AppMigrationHelper.swift */; };
@@ -168,6 +172,8 @@
 		EN1111111111111111111111 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		LF1111111111111111111111 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		ISO8601FILE222222222222 /* ISO8601DateParsing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ISO8601DateParsing.swift; sourceTree = "<group>"; };
+		FLEXDECFILE22222222222 /* FlexibleDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlexibleDecoder.swift; sourceTree = "<group>"; };
+		DBGLOGFILE222222222222 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		ZH1111111111111111111111 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		A66666666666666666666666 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A77777777777777777777777 /* UsageBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "UsageBar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -424,6 +430,8 @@
 				0F6CE62C58ECA852F25FEF30 /* MenuResultBuilder.swift */,
 				LF1111111111111111111111 /* L10n.swift */,
 				ISO8601FILE222222222222 /* ISO8601DateParsing.swift */,
+				FLEXDECFILE22222222222 /* FlexibleDecoder.swift */,
+				DBGLOGFILE222222222222 /* DebugLogger.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -635,6 +643,8 @@
 			283349022F313176004DADE1 /* ChutesProvider.swift in Sources */,
 				CLISYNTHETIC1111111111111 /* SyntheticProvider.swift in Sources */,
 			ISO8601CLI1111111111111 /* ISO8601DateParsing.swift in Sources */,
+			FLEXDECCLI111111111111 /* FlexibleDecoder.swift in Sources */,
+			DBGLOGCLI1111111111111 /* DebugLogger.swift in Sources */,
 			CLIPROVMGR11111111111111 /* CLIProviderManager.swift in Sources */,
 			CLICOPILOT11111111111111 /* CopilotCLIProvider.swift in Sources */,
 			CLIHISTORY11111111111111 /* CopilotHistoryService.swift in Sources */,
@@ -678,6 +688,8 @@
 				PMB111111111111111111111 /* ProviderMenuBuilder.swift in Sources */,
 				LL1111111111111111111111 /* L10n.swift in Sources */,
 				ISO8601APP1111111111111 /* ISO8601DateParsing.swift in Sources */,
+				FLEXDECAPP111111111111 /* FlexibleDecoder.swift in Sources */,
+				DBGLOGAPP1111111111111 /* DebugLogger.swift in Sources */,
 				F08C918116D7B3024B68C81A /* MenuDesignToken.swift in Sources */,
 				A14AF9AC6A646726B7C94978 /* MenuResultBuilder.swift in Sources */,
 				8EA90F9E26F29FC7938D2924 /* ViewModels/ProviderViewModel.swift in Sources */,

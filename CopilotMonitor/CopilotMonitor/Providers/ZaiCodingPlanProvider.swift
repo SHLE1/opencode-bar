@@ -34,52 +34,10 @@ private struct ZaiQuotaLimitItem: Decodable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         type = (try? container.decode(String.self, forKey: .type)) ?? ""
-        percentage = Self.decodeDouble(container, forKey: .percentage)
-        currentValue = Self.decodeInt(container, forKey: .currentValue)
-        total = Self.decodeInt(container, forKey: .total)
-        nextResetTime = Self.decodeInt64(container, forKey: .nextResetTime)
-    }
-
-    private static func decodeDouble(_ container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Double? {
-        if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-            return value
-        }
-        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-            return Double(value)
-        }
-        if let value = try? container.decodeIfPresent(String.self, forKey: key) {
-            return Double(value)
-        }
-        return nil
-    }
-
-    private static func decodeInt(_ container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Int? {
-        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-            return value
-        }
-        if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-            return Int(value)
-        }
-        if let value = try? container.decodeIfPresent(String.self, forKey: key) {
-            return Int(value)
-        }
-        return nil
-    }
-
-    private static func decodeInt64(_ container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Int64? {
-        if let value = try? container.decodeIfPresent(Int64.self, forKey: key) {
-            return value
-        }
-        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-            return Int64(value)
-        }
-        if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-            return Int64(value)
-        }
-        if let value = try? container.decodeIfPresent(String.self, forKey: key) {
-            return Int64(value)
-        }
-        return nil
+        percentage = FlexibleDecoder.decodeDouble(container, forKey: .percentage)
+        currentValue = FlexibleDecoder.decodeInt(container, forKey: .currentValue)
+        total = FlexibleDecoder.decodeInt(container, forKey: .total)
+        nextResetTime = FlexibleDecoder.decodeInt64(container, forKey: .nextResetTime)
     }
 }
 
@@ -98,21 +56,8 @@ private struct ZaiModelUsageTotals: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        totalTokensUsage = Self.decodeInt(container, forKey: .totalTokensUsage)
-        totalModelCallCount = Self.decodeInt(container, forKey: .totalModelCallCount)
-    }
-
-    private static func decodeInt(_ container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Int? {
-        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-            return value
-        }
-        if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-            return Int(value)
-        }
-        if let value = try? container.decodeIfPresent(String.self, forKey: key) {
-            return Int(value)
-        }
-        return nil
+        totalTokensUsage = FlexibleDecoder.decodeInt(container, forKey: .totalTokensUsage)
+        totalModelCallCount = FlexibleDecoder.decodeInt(container, forKey: .totalModelCallCount)
     }
 }
 
@@ -133,22 +78,9 @@ private struct ZaiToolUsageTotals: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        totalNetworkSearchCount = Self.decodeInt(container, forKey: .totalNetworkSearchCount)
-        totalWebReadMcpCount = Self.decodeInt(container, forKey: .totalWebReadMcpCount)
-        totalZreadMcpCount = Self.decodeInt(container, forKey: .totalZreadMcpCount)
-    }
-
-    private static func decodeInt(_ container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Int? {
-        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-            return value
-        }
-        if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-            return Int(value)
-        }
-        if let value = try? container.decodeIfPresent(String.self, forKey: key) {
-            return Int(value)
-        }
-        return nil
+        totalNetworkSearchCount = FlexibleDecoder.decodeInt(container, forKey: .totalNetworkSearchCount)
+        totalWebReadMcpCount = FlexibleDecoder.decodeInt(container, forKey: .totalWebReadMcpCount)
+        totalZreadMcpCount = FlexibleDecoder.decodeInt(container, forKey: .totalZreadMcpCount)
     }
 }
 

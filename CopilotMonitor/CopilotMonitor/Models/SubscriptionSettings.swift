@@ -167,35 +167,24 @@ struct ProviderSubscriptionPresets {
     static let openRouter: [SubscriptionPreset] = []
     static let openCode: [SubscriptionPreset] = []
 
+    private static let presetsMap: [ProviderIdentifier: [SubscriptionPreset]] = [
+        .claude: claude,
+        .codex: codex,
+        .geminiCLI: geminiCLI,
+        .copilot: copilot,
+        .kimi: kimi,
+        .minimaxCodingPlan: minimaxCodingPlan,
+        .antigravity: antigravity,
+        .openRouter: openRouter,
+        .openCode: openCode,
+        .zaiCodingPlan: zaiCodingPlan,
+        .nanoGpt: nanoGpt,
+        .synthetic: synthetic,
+        .chutes: chutes
+    ]
+
     static func presets(for provider: ProviderIdentifier) -> [SubscriptionPreset] {
-        switch provider {
-        case .claude:
-            return claude
-        case .codex:
-            return codex
-        case .geminiCLI:
-            return geminiCLI
-        case .copilot:
-            return copilot
-        case .kimi:
-            return kimi
-        case .minimaxCodingPlan:
-            return minimaxCodingPlan
-        case .antigravity:
-            return antigravity
-        case .openRouter:
-            return openRouter
-        case .openCode:
-            return openCode
-        case .zaiCodingPlan:
-            return zaiCodingPlan
-        case .nanoGpt:
-            return nanoGpt
-        case .synthetic:
-            return synthetic
-        case .chutes:
-            return chutes
-        }
+        presetsMap[provider] ?? []
     }
 }
 
@@ -248,9 +237,7 @@ final class SubscriptionSettingsManager {
     }
 
     func removePlans(forKeys keys: [String]) {
-        for key in keys {
-            removePlan(forKey: key)
-        }
+        keys.forEach { removePlan(forKey: $0) }
     }
 
     func getAllSubscriptionKeys() -> [String] {
@@ -260,19 +247,10 @@ final class SubscriptionSettingsManager {
     }
 
     func getTotalMonthlySubscriptionCost() -> Double {
-        var total: Double = 0
-        for key in getAllSubscriptionKeys() {
-            total += getPlan(forKey: key).cost
-        }
-        return total
+        getAllSubscriptionKeys().reduce(0) { $0 + getPlan(forKey: $1).cost }
     }
 
     func hasAnySubscription() -> Bool {
-        for key in getAllSubscriptionKeys() {
-            if getPlan(forKey: key).isSet {
-                return true
-            }
-        }
-        return false
+        getAllSubscriptionKeys().contains { getPlan(forKey: $0).isSet }
     }
 }

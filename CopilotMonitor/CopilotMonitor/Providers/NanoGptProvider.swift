@@ -25,11 +25,11 @@ private struct NanoGptSubscriptionUsageResponse: Decodable {
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            daily = NanoGptSubscriptionUsageResponse.decodeInt(
+            daily = FlexibleDecoder.decodeInt(
                 container,
                 forKeys: [.daily, .dailyInputTokens, .dailyInputTokensSnake]
             )
-            weeklyInputTokens = NanoGptSubscriptionUsageResponse.decodeInt(
+            weeklyInputTokens = FlexibleDecoder.decodeInt(
                 container,
                 forKeys: [
                     .weeklyInputTokens,
@@ -41,7 +41,7 @@ private struct NanoGptSubscriptionUsageResponse: Decodable {
                     .weeklyInputTokensLimitSnake
                 ]
             )
-            monthly = NanoGptSubscriptionUsageResponse.decodeInt(container, forKey: .monthly)
+            monthly = FlexibleDecoder.decodeInt(container, forKey: .monthly)
         }
     }
 
@@ -79,11 +79,11 @@ private struct NanoGptSubscriptionUsageResponse: Decodable {
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            used = NanoGptSubscriptionUsageResponse.decodeInt(
+            used = FlexibleDecoder.decodeInt(
                 container,
                 forKeys: [.used, .usage, .inputTokensUsed, .inputTokensUsedSnake, .usedTokens, .usedTokensSnake]
             )
-            remaining = NanoGptSubscriptionUsageResponse.decodeInt(container, forKeys: [.remaining, .left])
+            remaining = FlexibleDecoder.decodeInt(container, forKeys: [.remaining, .left])
             percentUsed = FlexibleDecoder.decodeDouble(
                 container,
                 forKeys: [.percentUsed, .percentUsedSnake, .usagePercent, .usagePercentSnake]
@@ -166,11 +166,11 @@ private struct NanoGptSubscriptionUsageResponse: Decodable {
         )
 
         let weeklyWindowFromFlatFields = WindowUsage(
-            used: NanoGptSubscriptionUsageResponse.decodeInt(
+            used: FlexibleDecoder.decodeInt(
                 container,
                 forKeys: [.weeklyInputTokensUsed, .weeklyInputTokensUsedSnake]
             ),
-            remaining: NanoGptSubscriptionUsageResponse.decodeInt(
+            remaining: FlexibleDecoder.decodeInt(
                 container,
                 forKeys: [.weeklyInputTokensRemaining, .weeklyInputTokensRemainingSnake]
             ),

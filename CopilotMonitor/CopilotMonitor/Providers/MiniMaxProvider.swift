@@ -43,18 +43,18 @@ private struct MiniMaxCodingPlanResponse: Decodable {
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            startTime = Self.decodeInt64(container, forKey: .startTime)
-            endTime = Self.decodeInt64(container, forKey: .endTime)
-            remainsTime = Self.decodeInt64(container, forKey: .remainsTime)
-            currentIntervalTotalCount = Self.decodeInt(container, forKey: .currentIntervalTotalCount)
-            currentIntervalUsageCount = Self.decodeInt(container, forKey: .currentIntervalUsageCount)
+            startTime = FlexibleDecoder.decodeInt64(container, forKey: .startTime)
+            endTime = FlexibleDecoder.decodeInt64(container, forKey: .endTime)
+            remainsTime = FlexibleDecoder.decodeInt64(container, forKey: .remainsTime)
+            currentIntervalTotalCount = FlexibleDecoder.decodeInt(container, forKey: .currentIntervalTotalCount)
+            currentIntervalUsageCount = FlexibleDecoder.decodeInt(container, forKey: .currentIntervalUsageCount)
             modelName = (try? container.decodeIfPresent(String.self, forKey: .modelName))?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            currentWeeklyTotalCount = Self.decodeInt(container, forKey: .currentWeeklyTotalCount)
-            currentWeeklyUsageCount = Self.decodeInt(container, forKey: .currentWeeklyUsageCount)
-            weeklyStartTime = Self.decodeInt64(container, forKey: .weeklyStartTime)
-            weeklyEndTime = Self.decodeInt64(container, forKey: .weeklyEndTime)
-            weeklyRemainsTime = Self.decodeInt64(container, forKey: .weeklyRemainsTime)
+            currentWeeklyTotalCount = FlexibleDecoder.decodeInt(container, forKey: .currentWeeklyTotalCount)
+            currentWeeklyUsageCount = FlexibleDecoder.decodeInt(container, forKey: .currentWeeklyUsageCount)
+            weeklyStartTime = FlexibleDecoder.decodeInt64(container, forKey: .weeklyStartTime)
+            weeklyEndTime = FlexibleDecoder.decodeInt64(container, forKey: .weeklyEndTime)
+            weeklyRemainsTime = FlexibleDecoder.decodeInt64(container, forKey: .weeklyRemainsTime)
         }
 
         var fiveHourUsagePercent: Double? {
@@ -87,34 +87,6 @@ private struct MiniMaxCodingPlanResponse: Decodable {
             max(currentIntervalTotalCount ?? 0, currentWeeklyTotalCount ?? 0)
         }
 
-        private static func decodeInt(_ container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Int? {
-            if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-                return value
-            }
-            if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-                return Int(value)
-            }
-            if let value = try? container.decodeIfPresent(String.self, forKey: key) {
-                return Int(value)
-            }
-            return nil
-        }
-
-        private static func decodeInt64(_ container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Int64? {
-            if let value = try? container.decodeIfPresent(Int64.self, forKey: key) {
-                return value
-            }
-            if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-                return Int64(value)
-            }
-            if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-                return Int64(value)
-            }
-            if let value = try? container.decodeIfPresent(String.self, forKey: key) {
-                return Int64(value)
-            }
-            return nil
-        }
     }
 
     let modelRemains: [ModelRemain]
