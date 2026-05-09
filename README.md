@@ -44,7 +44,7 @@ brew install --cask SHLE1/tap/usage-bar
 
 Download the latest `.dmg` from the [**Releases**](https://github.com/SHLE1/usage-bar/releases/latest) page, open it, and drag **UsageBar** to your Applications folder.
 
-UsageBar can check for new versions from the menu via **Check for Updates...**. Releases are currently unsigned, so macOS Gatekeeper may require manual approval after installing an update:
+UsageBar can check for new versions from the menu via **Check for Updates...**. Releases are currently unsigned, so update checks point to the GitHub release page for manual installation instead of replacing the app automatically. macOS Gatekeeper may require manual approval after installing an update:
 
 ```bash
 xattr -cr "/Applications/UsageBar.app"

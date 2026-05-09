@@ -197,52 +197,15 @@ jobs:
             echo "dmg_sha=$DMG_SHA"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Locate Sparkle Tools
-        id: sparkle_tools
-        run: |
-          SIGN_UPDATE=$(find "$HOME/Library/Developer/Xcode/DerivedData" \
-            -path '*/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update' \
-            -type f \
-            | head -n 1)
-
-          if [ -z "$SIGN_UPDATE" ]; then
-            echo "Sparkle sign_update tool was not found in DerivedData."
-            exit 1
-          fi
-
-          echo "sign_update=$SIGN_UPDATE" >> "$GITHUB_OUTPUT"
-          echo "Found Sparkle sign_update tool."
-
       - name: Create Sparkle Appcast
         id: appcast
-        env:
-          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
         run: |
-          if [ -z "${SPARKLE_ED_PRIVATE_KEY:-}" ]; then
-            echo "SPARKLE_ED_PRIVATE_KEY is not set. Add the Sparkle EdDSA private key as a GitHub Actions secret."
-            exit 1
-          fi
-
           VERSION_TAG="${{ steps.release_version.outputs.version_tag }}"
           VERSION_NUMBER="${{ steps.release_version.outputs.version_number }}"
           DIST_DIR="$RUNNER_TEMP/release-dist"
-          ZIP_NAME="${{ steps.package.outputs.zip_name }}"
-          ZIP_PATH="$DIST_DIR/$ZIP_NAME"
           APPCAST_PATH="$DIST_DIR/appcast.xml"
-          SIGN_UPDATE="${{ steps.sparkle_tools.outputs.sign_update }}"
           RELEASE_NOTES_URL="https://github.com/${{ github.repository }}/releases/tag/$VERSION_TAG"
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/$VERSION_TAG/$ZIP_NAME"
           PUB_DATE=$(LC_ALL=C TZ=UTC date -R)
-
-          SIGN_OUTPUT=$(printf '%s\n' "$SPARKLE_ED_PRIVATE_KEY" | "$SIGN_UPDATE" --ed-key-file - "$ZIP_PATH")
-          ED_SIGNATURE=$(printf '%s\n' "$SIGN_OUTPUT" | sed -nE 's/.*sparkle:edSignature="([^"]+)".*/\1/p')
-          ZIP_LENGTH=$(printf '%s\n' "$SIGN_OUTPUT" | sed -nE 's/.*(sparkle:)?length="([^"]+)".*/\2/p')
-
-          if [ -z "$ED_SIGNATURE" ] || [ -z "$ZIP_LENGTH" ]; then
-            echo "Failed to parse Sparkle signature output:"
-            printf '%s\n' "$SIGN_OUTPUT"
-            exit 1
-          fi
 
           printf '%s\n' \
             '<?xml version="1.0" encoding="utf-8"?>' \
@@ -258,8 +221,9 @@ jobs:
             "      <sparkle:shortVersionString>$VERSION_NUMBER</sparkle:shortVersionString>" \
             '      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>' \
             "      <pubDate>$PUB_DATE</pubDate>" \
-            "      <sparkle:releaseNotesLink>$RELEASE_NOTES_URL</sparkle:releaseNotesLink>" \
-            "      <enclosure url=\"$DOWNLOAD_URL\" sparkle:edSignature=\"$ED_SIGNATURE\" length=\"$ZIP_LENGTH\" type=\"application/octet-stream\" />" \
+            "      <link>$RELEASE_NOTES_URL</link>" \
+            "      <description>UsageBar releases are currently unsigned. Open the release page and install the DMG manually.</description>" \
+            '      <sparkle:informationalUpdate />' \
             '    </item>' \
             '  </channel>' \
             '</rss>' \
@@ -305,9 +269,10 @@ jobs:
             printf '%s\n' "- \`$DMG_NAME\`"
             printf '%s\n' "  - SHA256: \`$DMG_SHA\`"
             printf '%s\n' "- \`$APPCAST_NAME\`"
-            printf '%s\n' '  - Sparkle update feed used by Check for Updates...'
+            printf '%s\n' '  - Informational Sparkle feed used by Check for Updates...'
             printf '\n%s\n' '## Notice'
-            printf '%s\n' 'These artifacts are unsigned and not notarized, so macOS Gatekeeper may require manual override before opening.'
+            printf '%s\n' 'These artifacts are unsigned and not notarized. Sparkle cannot safely auto-install unsigned updates, so Check for Updates opens the release page for manual installation.'
+            printf '%s\n' 'macOS Gatekeeper may require manual override before opening.'
             printf '\n%s\n' 'After moving the app to Applications, run:'
             printf '%s\n' '```bash'
             printf '%s\n' 'xattr -cr "/Applications/UsageBar.app"'

@@ -44,7 +44,7 @@ brew install --cask SHLE1/tap/usage-bar
 
 从 [**Releases**](https://github.com/SHLE1/usage-bar/releases/latest) 页面下载最新的 `.dmg` 文件，打开后将 **UsageBar** 拖入「应用程序」文件夹即可。
 
-UsageBar 可通过菜单中的 **Check for Updates...** 检查新版本。当前发布包未签名，安装更新后 macOS Gatekeeper 可能仍需手动允许：
+UsageBar 可通过菜单中的 **Check for Updates...** 检查新版本。当前发布包未签名，因此更新检查会打开 GitHub Release 页面供手动安装，而不会自动替换应用。安装更新后 macOS Gatekeeper 可能仍需手动允许：
 
 ```bash
 xattr -cr "/Applications/UsageBar.app"

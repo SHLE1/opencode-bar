@@ -1,0 +1,71 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">UsageBar Icon Concept</title>
+  <desc id="desc">A dark rounded-square macOS app icon with an abstract U-shaped usage meter and an incomplete green-to-cyan progress ring.</desc>
+
+  <defs>
+    <linearGradient id="baseGradient" x1="176" y1="96" x2="848" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#30343B"/>
+      <stop offset="0.48" stop-color="#171A20"/>
+      <stop offset="1" stop-color="#07090D"/>
+    </linearGradient>
+
+    <linearGradient id="surfaceGradient" x1="292" y1="188" x2="732" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3C424D"/>
+      <stop offset="1" stop-color="#12151B"/>
+    </linearGradient>
+
+    <linearGradient id="progressGradient" x1="272" y1="236" x2="784" y2="768" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#68F58F"/>
+      <stop offset="0.48" stop-color="#26DFA7"/>
+      <stop offset="1" stop-color="#36C5FF"/>
+    </linearGradient>
+
+    <linearGradient id="uGradient" x1="336" y1="292" x2="688" y2="764" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7FFF9"/>
+      <stop offset="0.45" stop-color="#BEFFD8"/>
+      <stop offset="1" stop-color="#69D7FF"/>
+    </linearGradient>
+
+    <filter id="baseShadow" x="44" y="44" width="936" height="936" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="34" stdDeviation="36" flood-color="#000000" flood-opacity="0.36"/>
+    </filter>
+
+    <filter id="softGlow" x="172" y="172" width="680" height="680" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="20" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.1 0 0 0 0 0.95 0 0 0 0 0.75 0 0 0 0.34 0"/>
+      <feBlend in2="SourceGraphic" mode="screen"/>
+    </filter>
+
+    <filter id="innerDepth" x="240" y="220" width="544" height="568" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+
+    <clipPath id="baseClip">
+      <rect x="96" y="96" width="832" height="832" rx="188"/>
+    </clipPath>
+  </defs>
+
+  <g filter="url(#baseShadow)">
+    <rect x="96" y="96" width="832" height="832" rx="188" fill="url(#baseGradient)"/>
+  </g>
+
+  <g clip-path="url(#baseClip)">
+    <path d="M144 164C236 94 386 90 512 126C704 180 860 346 900 542C925 666 900 812 812 928H928V96H96V272C108 232 124 196 144 164Z" fill="white" opacity="0.08"/>
+    <circle cx="512" cy="512" r="294" fill="url(#surfaceGradient)" opacity="0.88"/>
+    <circle cx="512" cy="512" r="242" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+  </g>
+
+  <path d="M512 228C668.849 228 796 355.151 796 512C796 651.851 694.855 768.096 561.74 791.684" stroke="#424954" stroke-width="86" stroke-linecap="round"/>
+  <path d="M512 228C668.849 228 796 355.151 796 512C796 651.851 694.855 768.096 561.74 791.684" stroke="url(#progressGradient)" stroke-width="86" stroke-linecap="round" filter="url(#softGlow)"/>
+
+  <g filter="url(#innerDepth)">
+    <path d="M340 356C340 331.699 359.699 312 384 312C408.301 312 428 331.699 428 356V574C428 626.467 459.914 660 512 660C564.086 660 596 626.467 596 574V356C596 331.699 615.699 312 640 312C664.301 312 684 331.699 684 356V580C684 691.26 612.921 756 512 756C411.079 756 340 691.26 340 580V356Z" fill="url(#uGradient)"/>
+    <path d="M428 356V574C428 626.467 459.914 660 512 660C564.086 660 596 626.467 596 574V356" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="18" stroke-linecap="round"/>
+  </g>
+
+  <circle cx="744" cy="296" r="38" fill="#68F58F"/>
+  <circle cx="744" cy="296" r="18" fill="#EFFFF4" opacity="0.82"/>
+  <circle cx="744" cy="296" r="58" stroke="#68F58F" stroke-opacity="0.18" stroke-width="14"/>
+
+  <rect x="96" y="96" width="832" height="832" rx="188" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="3"/>
+</svg>
