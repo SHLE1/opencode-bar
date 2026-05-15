@@ -82,8 +82,8 @@ actor ProviderManager {
     /// - Returns: FetchAllResult containing both successful results and error messages
     /// - Note: Returns partial results if some providers fail (graceful degradation)
     func fetchAll() async -> FetchAllResult {
-        logger.info("🔵 [ProviderManager] fetchAll() started - \(self.providers.count) providers")
-        DebugLogger.log("ProviderManager", "🔵 fetchAll() started - \(self.providers.count) providers")
+        logger.info("[ProviderManager] fetchAll() started - \(self.providers.count) providers")
+        DebugLogger.log("ProviderManager", "fetchAll() started - \(self.providers.count) providers")
 
         var results: [ProviderIdentifier: ProviderResult] = [:]
         var errors: [ProviderIdentifier: String] = [:]
@@ -92,12 +92,12 @@ actor ProviderManager {
         // Return type: (identifier, result, errorMessage)
         await withTaskGroup(of: (ProviderIdentifier, ProviderResult?, String?).self) { group in
             for provider in self.providers {
-                logger.debug("🟡 [ProviderManager] Adding fetch task for \(provider.identifier.displayName)")
-                DebugLogger.log("ProviderManager", "🟡 Adding fetch task for \(provider.identifier.displayName)")
+                logger.debug("[ProviderManager] Adding fetch task for \(provider.identifier.displayName)")
+                DebugLogger.log("ProviderManager", "Adding fetch task for \(provider.identifier.displayName)")
                 
                 group.addTask { [weak self] in
                     guard let self = self else {
-                        logger.warning("🔴 [ProviderManager] Self deallocated for \(provider.identifier.displayName)")
+                        logger.warning("[ProviderManager] Self deallocated for \(provider.identifier.displayName)")
                         return (provider.identifier, nil, "Self deallocated")
                     }
                     return await self.fetchProvider(provider)
@@ -105,17 +105,17 @@ actor ProviderManager {
             }
 
             // Collect results from all tasks
-            logger.debug("🟡 [ProviderManager] Collecting results from task group")
-            DebugLogger.log("ProviderManager", "🟡 Collecting results from task group")
+            logger.debug("[ProviderManager] Collecting results from task group")
+            DebugLogger.log("ProviderManager", "Collecting results from task group")
             
             for await (identifier, result, errorMessage) in group {
                 if let result = result {
                     results[identifier] = result
-                    logger.debug("🟢 [ProviderManager] Collected result for \(identifier.displayName)")
-                    DebugLogger.log("ProviderManager", "🟢 Collected result for \(identifier.displayName)")
+                    logger.debug("[ProviderManager] Collected result for \(identifier.displayName)")
+                    DebugLogger.log("ProviderManager", "Collected result for \(identifier.displayName)")
                 } else {
-                    logger.warning("🔴 [ProviderManager] No result for \(identifier.displayName)")
-                    DebugLogger.log("ProviderManager", "🔴 No result for \(identifier.displayName)")
+                    logger.warning("[ProviderManager] No result for \(identifier.displayName)")
+                    DebugLogger.log("ProviderManager", "No result for \(identifier.displayName)")
                 }
                 
                 // Store error message even if we have cached result (to show user there was an issue)
@@ -125,8 +125,8 @@ actor ProviderManager {
             }
         }
 
-        logger.info("🟢 [ProviderManager] fetchAll() completed: \(results.count)/\(self.providers.count) providers succeeded, \(errors.count) errors")
-        DebugLogger.log("ProviderManager", "🟢 fetchAll() completed: \(results.count)/\(self.providers.count) providers succeeded, \(errors.count) errors")
+        logger.info("[ProviderManager] fetchAll() completed: \(results.count)/\(self.providers.count) providers succeeded, \(errors.count) errors")
+        DebugLogger.log("ProviderManager", "fetchAll() completed: \(results.count)/\(self.providers.count) providers succeeded, \(errors.count) errors")
         return FetchAllResult(results: results, errors: errors)
     }
     
@@ -157,7 +157,7 @@ actor ProviderManager {
 
                 // Alert if remaining < 20%
                 if remainingPercentage < 20.0 {
-                    logger.warning("⚠️ \(identifier.displayName) quota alert: \(String(format: "%.1f", remainingPercentage))% remaining")
+                    logger.warning("\(identifier.displayName) quota alert: \(String(format: "%.1f", remainingPercentage))% remaining")
                     return (identifier, remainingPercentage)
                 }
                 return nil
@@ -190,24 +190,24 @@ actor ProviderManager {
         let identifier = provider.identifier
 
         if let inFlight = inFlightFetches[identifier] {
-            logger.info("🟡 [ProviderManager] Joining in-flight fetch for \(provider.identifier.displayName)")
-            DebugLogger.log("ProviderManager", "🟡 Joining in-flight fetch for \(provider.identifier.displayName)")
+            logger.info("[ProviderManager] Joining in-flight fetch for \(provider.identifier.displayName)")
+            DebugLogger.log("ProviderManager", "Joining in-flight fetch for \(provider.identifier.displayName)")
             return await resolveFetch(provider: provider, inFlight: inFlight)
         }
 
         if let throttled = throttledFetchOutcome(for: provider) {
             if throttled.result != nil {
-                logger.info("🟡 [ProviderManager] Skipping \(provider.identifier.displayName) network fetch due to minimum interval")
-                DebugLogger.log("ProviderManager", "🟡 Skipping \(provider.identifier.displayName) network fetch due to minimum interval")
+                logger.info("[ProviderManager] Skipping \(provider.identifier.displayName) network fetch due to minimum interval")
+                DebugLogger.log("ProviderManager", "Skipping \(provider.identifier.displayName) network fetch due to minimum interval")
             } else if let errorMessage = throttled.errorMessage {
-                logger.warning("🟡 [ProviderManager] Returning throttled error for \(provider.identifier.displayName): \(errorMessage)")
-                DebugLogger.log("ProviderManager", "🟡 Returning throttled error for \(provider.identifier.displayName): \(errorMessage)")
+                logger.warning("[ProviderManager] Returning throttled error for \(provider.identifier.displayName): \(errorMessage)")
+                DebugLogger.log("ProviderManager", "Returning throttled error for \(provider.identifier.displayName): \(errorMessage)")
             }
             return (identifier, throttled.result, throttled.errorMessage)
         }
 
-        logger.debug("🟡 [ProviderManager] Fetching \(provider.identifier.displayName)")
-        DebugLogger.log("ProviderManager", "🟡 Fetching \(provider.identifier.displayName)")
+        logger.debug("[ProviderManager] Fetching \(provider.identifier.displayName)")
+        DebugLogger.log("ProviderManager", "Fetching \(provider.identifier.displayName)")
 
         lastNetworkFetchAt[identifier] = Date()
         let token = UUID()
@@ -232,8 +232,8 @@ actor ProviderManager {
             lastProviderErrors[identifier] = nil
             clearInFlightFetch(identifier: identifier, token: inFlight.token)
 
-            logger.info("🟢 [ProviderManager] ✓ \(provider.identifier.displayName) fetch succeeded")
-            DebugLogger.log("ProviderManager", "🟢 ✓ \(provider.identifier.displayName) fetch succeeded")
+            logger.info("[ProviderManager] \(provider.identifier.displayName) fetch succeeded")
+            DebugLogger.log("ProviderManager", "\(provider.identifier.displayName) fetch succeeded")
 
             return (identifier, result, nil)
         } catch {
@@ -241,16 +241,16 @@ actor ProviderManager {
             lastProviderErrors[identifier] = errorMessage
             clearInFlightFetch(identifier: identifier, token: inFlight.token)
 
-            logger.error("🔴 [ProviderManager] ✗ \(provider.identifier.displayName) fetch failed: \(errorMessage)")
-            DebugLogger.log("ProviderManager", "🔴 ✗ \(provider.identifier.displayName) fetch failed: \(errorMessage)")
+            logger.error("[ProviderManager] \(provider.identifier.displayName) fetch failed: \(errorMessage)")
+            DebugLogger.log("ProviderManager", "\(provider.identifier.displayName) fetch failed: \(errorMessage)")
 
             let cached = cachedResults[identifier]
             if cached != nil {
-                logger.warning("🟡 [ProviderManager] Using cached value for \(provider.identifier.displayName)")
-                DebugLogger.log("ProviderManager", "🟡 Using cached value for \(provider.identifier.displayName)")
+                logger.warning("[ProviderManager] Using cached value for \(provider.identifier.displayName)")
+                DebugLogger.log("ProviderManager", "Using cached value for \(provider.identifier.displayName)")
             } else {
-                logger.warning("🔴 [ProviderManager] No cached value available for \(provider.identifier.displayName)")
-                DebugLogger.log("ProviderManager", "🔴 No cached value available for \(provider.identifier.displayName)")
+                logger.warning("[ProviderManager] No cached value available for \(provider.identifier.displayName)")
+                DebugLogger.log("ProviderManager", "No cached value available for \(provider.identifier.displayName)")
             }
 
             return (identifier, cached, errorMessage)

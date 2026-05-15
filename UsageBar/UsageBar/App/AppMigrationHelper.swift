@@ -25,19 +25,19 @@ final class AppMigrationHelper {
         let bundlePath = Bundle.main.bundlePath
         let currentBundleName = (bundlePath as NSString).lastPathComponent
         
-        logger.info("📦 [Migration] Current bundle: \(currentBundleName) at \(bundlePath)")
+        logger.info("[Migration] Current bundle: \(currentBundleName) at \(bundlePath)")
         
         if currentBundleName == targetBundleName {
-            logger.info("✅ [Migration] Bundle name is correct, no migration needed")
+            logger.info("[Migration] Bundle name is correct, no migration needed")
             return false
         }
         
         guard legacyBundleNames.contains(currentBundleName) else {
-            logger.info("ℹ️ [Migration] Unknown bundle name '\(currentBundleName)', skipping migration")
+            logger.info("[Migration] Unknown bundle name '\(currentBundleName)', skipping migration")
             return false
         }
         
-        logger.warning("⚠️ [Migration] Legacy bundle detected: \(currentBundleName) → \(self.targetBundleName)")
+        logger.warning("[Migration] Legacy bundle detected: \(currentBundleName) to \(self.targetBundleName)")
         
         return performMigration(from: bundlePath, currentName: currentBundleName)
     }
@@ -57,13 +57,13 @@ final class AppMigrationHelper {
                 
                 if let targetVer = targetVersion, let currentVer = currentVersion,
                    targetVer.compare(currentVer, options: .numeric) != .orderedAscending {
-                    logger.info("✅ [Migration] Target already exists and is same/newer version, launching it")
+                    logger.info("[Migration] Target already exists and is same/newer version, launching it")
                     NSWorkspace.shared.openApplication(
                         at: URL(fileURLWithPath: targetPath),
                         configuration: NSWorkspace.OpenConfiguration()
                     ) { _, error in
                         if let error = error {
-                            logger.error("❌ [Migration] Failed to launch target: \(error.localizedDescription)")
+                            logger.error("[Migration] Failed to launch target: \(error.localizedDescription)")
                         }
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -72,39 +72,39 @@ final class AppMigrationHelper {
                     return true
                 }
                 
-                logger.info("🔄 [Migration] Target exists but is older version, removing it")
+                logger.info("[Migration] Target exists but is older version, removing it")
                 do {
                     try fileManager.removeItem(atPath: targetPath)
                 } catch {
-                    logger.error("❌ [Migration] Failed to remove existing target: \(error.localizedDescription)")
+                    logger.error("[Migration] Failed to remove existing target: \(error.localizedDescription)")
                     showMigrationError(message: "Failed to remove existing app at:\n\(targetPath)\n\nPlease remove it manually and restart.")
                     return false
                 }
             } else {
-                logger.warning("⚠️ [Migration] Target exists but has unexpected bundle ID, skipping migration")
+                logger.warning("[Migration] Target exists but has unexpected bundle ID, skipping migration")
                 showMigrationError(message: "An app already exists at:\n\(targetPath)\n\nBut it appears to be a different application. Please remove it manually if you want to proceed with migration.")
                 return false
             }
         }
         
-        logger.info("📋 [Migration] Copying \(currentPath) → \(targetPath)")
+        logger.info("[Migration] Copying \(currentPath) to \(targetPath)")
         do {
             try fileManager.copyItem(atPath: currentPath, toPath: targetPath)
         } catch {
-            logger.error("❌ [Migration] Failed to copy app: \(error.localizedDescription)")
+            logger.error("[Migration] Failed to copy app: \(error.localizedDescription)")
             showMigrationError(message: "Failed to migrate app:\n\(error.localizedDescription)\n\nPlease reinstall from the DMG.")
             return false
         }
         
-        logger.info("🚀 [Migration] Launching migrated app at \(targetPath)")
+        logger.info("[Migration] Launching migrated app at \(targetPath)")
         
         DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1.0) {
             let fm = FileManager.default
             do {
                 try fm.removeItem(atPath: currentPath)
-                logger.info("🗑️ [Migration] Removed old bundle at \(currentPath)")
+                logger.info("[Migration] Removed old bundle at \(currentPath)")
             } catch {
-                logger.error("❌ [Migration] Failed to remove old bundle: \(error.localizedDescription)")
+                logger.error("[Migration] Failed to remove old bundle: \(error.localizedDescription)")
             }
             
             NSWorkspace.shared.openApplication(
@@ -112,12 +112,12 @@ final class AppMigrationHelper {
                 configuration: NSWorkspace.OpenConfiguration()
             ) { _, error in
                 if let error = error {
-                    logger.error("❌ [Migration] Failed to launch new app: \(error.localizedDescription)")
+                    logger.error("[Migration] Failed to launch new app: \(error.localizedDescription)")
                 }
             }
         }
         
-        logger.info("👋 [Migration] Quitting old app instance")
+        logger.info("[Migration] Quitting old app instance")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApp.terminate(nil)
         }
@@ -151,16 +151,16 @@ final class AppMigrationHelper {
             if let legacyBundle = Bundle(path: legacyPath),
                let bundleID = legacyBundle.bundleIdentifier,
                bundleID == expectedBundleID {
-                logger.info("🧹 [Migration] Found validated legacy bundle to clean up: \(legacyName)")
+                logger.info("[Migration] Found validated legacy bundle to clean up: \(legacyName)")
                 
                 do {
                     try fileManager.removeItem(atPath: legacyPath)
-                    logger.info("✅ [Migration] Removed legacy bundle: \(legacyName)")
+                    logger.info("[Migration] Removed legacy bundle: \(legacyName)")
                 } catch {
-                    logger.warning("⚠️ [Migration] Could not remove legacy bundle: \(error.localizedDescription)")
+                    logger.warning("[Migration] Could not remove legacy bundle: \(error.localizedDescription)")
                 }
             } else {
-                logger.warning("⚠️ [Migration] Skipping \(legacyName) - bundle ID mismatch or unreadable")
+                logger.warning("[Migration] Skipping \(legacyName) - bundle ID mismatch or unreadable")
             }
         }
     }
@@ -177,7 +177,7 @@ final class AppMigrationHelper {
             if defaults.object(forKey: canonicalEnabledKey) == nil {
                 let value = defaults.bool(forKey: legacyEnabledKey)
                 defaults.set(value, forKey: canonicalEnabledKey)
-                logger.info("✅ [Migration] Migrated \(legacyEnabledKey) → \(canonicalEnabledKey) = \(value)")
+                logger.info("[Migration] Migrated \(legacyEnabledKey) to \(canonicalEnabledKey) = \(value)")
             }
             defaults.removeObject(forKey: legacyEnabledKey)
         }
@@ -185,7 +185,7 @@ final class AppMigrationHelper {
         let pinnedKey = "statusBarDisplay.provider"
         if let pinnedValue = defaults.string(forKey: pinnedKey), pinnedValue == legacyRaw {
             defaults.set(canonicalRaw, forKey: pinnedKey)
-            logger.info("✅ [Migration] Migrated pinned provider from \(legacyRaw) → \(canonicalRaw)")
+            logger.info("[Migration] Migrated pinned provider from \(legacyRaw) to \(canonicalRaw)")
         }
 
         let multiKey = "statusBarDisplay.multiProviderProviders"
@@ -198,7 +198,7 @@ final class AppMigrationHelper {
                 }
                 let deduped = Array(NSOrderedSet(array: providers)) as? [String] ?? providers
                 defaults.set(deduped, forKey: multiKey)
-                logger.info("✅ [Migration] Migrated multi-provider selection: replaced \(legacyRaw) with \(canonicalRaw)")
+                logger.info("[Migration] Migrated multi-provider selection: replaced \(legacyRaw) with \(canonicalRaw)")
             }
         }
 
@@ -212,7 +212,7 @@ final class AppMigrationHelper {
         }
         for key in staleKeys {
             defaults.removeObject(forKey: key)
-            logger.info("🧹 [Migration] Removed stale subscription key: \(key)")
+            logger.info("[Migration] Removed stale subscription key: \(key)")
         }
     }
 }

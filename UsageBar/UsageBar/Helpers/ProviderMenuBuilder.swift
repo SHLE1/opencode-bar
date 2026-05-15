@@ -686,8 +686,6 @@ extension StatusBarController {
                 submenu.addItem(NSMenuItem.separator())
                 addPlanSection(to: submenu, planText: planText)
             }
-        default:
-            break
         }
 
         if let daily = details.dailyUsage {
@@ -1272,10 +1270,23 @@ extension StatusBarController {
         let emphasisColor = paceInfo.status.color
 
         if hasTooFast {
-            let rabbitView = createRunningRabbitView()
-            rabbitView.frame = NSRect(x: rightEdge - 14, y: 3, width: 14, height: 16)
-            view.addSubview(rabbitView)
-            rightEdge -= 18
+            let statusIconSize = MenuDesignToken.Dimension.paceStatusIconSize
+            let statusIconY = (itemHeight - statusIconSize) / 2
+            let statusIconView = NSImageView(
+                frame: NSRect(
+                    x: rightEdge - statusIconSize,
+                    y: statusIconY,
+                    width: statusIconSize,
+                    height: statusIconSize
+                )
+            )
+            if let statusIcon = NSImage(systemSymbolName: "speedometer", accessibilityDescription: "Too fast") {
+                let config = NSImage.SymbolConfiguration(pointSize: statusIconSize, weight: .regular)
+                statusIconView.image = statusIcon.withSymbolConfiguration(config)
+                statusIconView.contentTintColor = emphasisColor
+            }
+            view.addSubview(statusIconView)
+            rightEdge -= statusIconSize + MenuDesignToken.Spacing.trailingMargin - MenuDesignToken.Dimension.statusDotSize
         }
 
         let dotY: CGFloat = (itemHeight - statusDotSize) / 2
@@ -1368,36 +1379,6 @@ extension StatusBarController {
                 leftTextField.trailingAnchor.constraint(lessThanOrEqualTo: rightTextField.leadingAnchor, constant: -dotSpacing)
             ])
         }
-
-        return view
-    }
-
-    func createRunningRabbitView() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 30, height: 16))
-        view.wantsLayer = true
-
-        let rabbitLabel = NSTextField(labelWithString: "🐰")
-        rabbitLabel.font = NSFont.systemFont(ofSize: 11)
-        rabbitLabel.frame = NSRect(x: 0, y: 0, width: 20, height: 16)
-        rabbitLabel.wantsLayer = true
-        view.addSubview(rabbitLabel)
-
-        let bounceAnimation = CAKeyframeAnimation(keyPath: "position.y")
-        bounceAnimation.values = [0, -3, 0, -2, 0]
-        bounceAnimation.keyTimes = [0, 0.25, 0.5, 0.75, 1.0]
-        bounceAnimation.duration = 0.4
-        bounceAnimation.repeatCount = .infinity
-        bounceAnimation.isAdditive = true
-
-        let hopAnimation = CAKeyframeAnimation(keyPath: "position.x")
-        hopAnimation.values = [0, 3, 0]
-        hopAnimation.keyTimes = [0, 0.5, 1.0]
-        hopAnimation.duration = 0.4
-        hopAnimation.repeatCount = .infinity
-        hopAnimation.isAdditive = true
-
-        rabbitLabel.layer?.add(bounceAnimation, forKey: "bounce")
-        rabbitLabel.layer?.add(hopAnimation, forKey: "hop")
 
         return view
     }

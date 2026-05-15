@@ -271,19 +271,7 @@ final class StatusBarController: NSObject {
     }
 
     func debugLog(_ message: String) {
-        let msg = "[\(Date())] \(message)\n"
-        if let data = msg.data(using: .utf8) {
-            let path = "/tmp/provider_debug.log"
-            if FileManager.default.fileExists(atPath: path) {
-                if let handle = FileHandle(forWritingAtPath: path) {
-                    handle.seekToEndOfFile()
-                    handle.write(data)
-                    handle.closeFile()
-                }
-            } else {
-                try? data.write(to: URL(fileURLWithPath: path))
-            }
-        }
+        logger.debug("\(message, privacy: .public)")
     }
 
     private func boolPreference(forKey key: String, defaultValue: Bool) -> Bool {
@@ -450,40 +438,40 @@ final class StatusBarController: NSObject {
     // MARK: - Multi-Provider Fetch
 
      private func fetchMultiProviderData() async {
-           debugLog("🔵 fetchMultiProviderData: started")
-           logger.info("🔵 [StatusBarController] fetchMultiProviderData() started")
+           debugLog("fetchMultiProviderData: started")
+           logger.info("[StatusBarController] fetchMultiProviderData() started")
            
            let enabledProviders = await ProviderManager.shared.getAllProviders().filter { provider in
                isProviderEnabled(provider.identifier)
            }
-           debugLog("🔵 fetchMultiProviderData: enabledProviders count=\(enabledProviders.count)")
-           logger.debug("🔵 [StatusBarController] enabledProviders: \(enabledProviders.map { $0.identifier.displayName }.joined(separator: ", "))")
+           debugLog("fetchMultiProviderData: enabledProviders count=\(enabledProviders.count)")
+           logger.debug("[StatusBarController] enabledProviders: \(enabledProviders.map { $0.identifier.displayName }.joined(separator: ", "))")
 
            guard !enabledProviders.isEmpty else {
-               logger.info("🟡 [StatusBarController] fetchMultiProviderData: No enabled providers, skipping")
-               debugLog("🟡 fetchMultiProviderData: No enabled providers, returning")
+               logger.info("[StatusBarController] fetchMultiProviderData: No enabled providers, skipping")
+               debugLog("fetchMultiProviderData: No enabled providers, returning")
                return
            }
 
            loadingProviders = Set(enabledProviders.map { $0.identifier })
            let loadingCount = loadingProviders.count
            let loadingNames = loadingProviders.map { $0.displayName }.joined(separator: ", ")
-           debugLog("🟡 fetchMultiProviderData: marked \(loadingCount) providers as loading")
-           logger.debug("🟡 [StatusBarController] loadingProviders set: \(loadingNames)")
+           debugLog("fetchMultiProviderData: marked \(loadingCount) providers as loading")
+           logger.debug("[StatusBarController] loadingProviders set: \(loadingNames)")
            updateMultiProviderMenu()
 
-           logger.info("🟡 [StatusBarController] fetchMultiProviderData: Calling ProviderManager.fetchAll()")
-           debugLog("🟡 fetchMultiProviderData: calling ProviderManager.fetchAll()")
+           logger.info("[StatusBarController] fetchMultiProviderData: Calling ProviderManager.fetchAll()")
+           debugLog("fetchMultiProviderData: calling ProviderManager.fetchAll()")
            let fetchResult = await ProviderManager.shared.fetchAll()
-           debugLog("🟢 fetchMultiProviderData: fetchAll returned \(fetchResult.results.count) results, \(fetchResult.errors.count) errors")
-           logger.info("🟢 [StatusBarController] fetchMultiProviderData: fetchAll() returned \(fetchResult.results.count) results, \(fetchResult.errors.count) errors")
+           debugLog("fetchMultiProviderData: fetchAll returned \(fetchResult.results.count) results, \(fetchResult.errors.count) errors")
+           logger.info("[StatusBarController] fetchMultiProviderData: fetchAll() returned \(fetchResult.results.count) results, \(fetchResult.errors.count) errors")
 
            let filteredResults = fetchResult.results.filter { identifier, _ in
                isProviderEnabled(identifier)
            }
            let filteredNames = filteredResults.keys.map { $0.displayName }.joined(separator: ", ")
-           debugLog("🟢 fetchMultiProviderData: filteredResults count=\(filteredResults.count)")
-           logger.debug("🟢 [StatusBarController] filteredResults: \(filteredNames)")
+           debugLog("fetchMultiProviderData: filteredResults count=\(filteredResults.count)")
+           logger.debug("[StatusBarController] filteredResults: \(filteredNames)")
 
            self.providerResults = filteredResults
             
@@ -501,10 +489,10 @@ final class StatusBarController: NSObject {
                     copilotPlan: details.planType,
                     quotaResetDateUTC: details.copilotQuotaResetDateUTC
                 )
-                debugLog("🟢 fetchMultiProviderData: currentUsage set from Copilot provider - used: \(usedRequests), limit: \(limitRequests)")
-                logger.info("🟢 [StatusBarController] currentUsage set from Copilot provider")
+                debugLog("fetchMultiProviderData: currentUsage set from Copilot provider - used: \(usedRequests), limit: \(limitRequests)")
+                logger.info("[StatusBarController] currentUsage set from Copilot provider")
             } else {
-                debugLog("🟡 fetchMultiProviderData: No Copilot data available, currentUsage not set")
+                debugLog("fetchMultiProviderData: No Copilot data available, currentUsage not set")
             }
             
             let filteredErrors = fetchResult.errors.filter { identifier, _ in
@@ -519,24 +507,24 @@ final class StatusBarController: NSObject {
                loadingProviders.remove(identifier)
            }
            let remainingLoading = loadingProviders.map { $0.displayName }.joined(separator: ", ")
-           debugLog("🟢 fetchMultiProviderData: cleared loading state for \(filteredResults.count) results, \(filteredErrors.count) errors")
-           logger.debug("🟢 [StatusBarController] loadingProviders after clear: \(remainingLoading)")
+           debugLog("fetchMultiProviderData: cleared loading state for \(filteredResults.count) results, \(filteredErrors.count) errors")
+           logger.debug("[StatusBarController] loadingProviders after clear: \(remainingLoading)")
            self.viewErrorDetailsItem.isHidden = filteredErrors.isEmpty
-           debugLog("📍 fetchMultiProviderData: viewErrorDetailsItem.isHidden = \(filteredErrors.isEmpty)")
+           debugLog("fetchMultiProviderData: viewErrorDetailsItem.isHidden = \(filteredErrors.isEmpty)")
            
            if !filteredErrors.isEmpty {
                let errorNames = filteredErrors.keys.map { $0.displayName }.joined(separator: ", ")
-               debugLog("🔴 fetchMultiProviderData: errors from: \(errorNames)")
-               logger.warning("🔴 [StatusBarController] Errors from providers: \(errorNames)")
+               debugLog("fetchMultiProviderData: errors from: \(errorNames)")
+               logger.warning("[StatusBarController] Errors from providers: \(errorNames)")
            }
-           debugLog("🟢 fetchMultiProviderData: calling updateMultiProviderMenu")
-           logger.debug("🟢 [StatusBarController] providerResults updated, calling updateMultiProviderMenu()")
+           debugLog("fetchMultiProviderData: calling updateMultiProviderMenu")
+           logger.debug("[StatusBarController] providerResults updated, calling updateMultiProviderMenu()")
            self.updateMultiProviderMenu()
-           debugLog("🟢 fetchMultiProviderData: updateMultiProviderMenu completed")
-           logger.info("🟢 [StatusBarController] fetchMultiProviderData: updateMultiProviderMenu() completed")
+           debugLog("fetchMultiProviderData: updateMultiProviderMenu completed")
+           logger.info("[StatusBarController] fetchMultiProviderData: updateMultiProviderMenu() completed")
 
-           logger.info("🟢 [StatusBarController] fetchMultiProviderData: Completed with \(filteredResults.count) results")
-           debugLog("🟢 fetchMultiProviderData: completed")
+           logger.info("[StatusBarController] fetchMultiProviderData: Completed with \(filteredResults.count) results")
+           debugLog("fetchMultiProviderData: completed")
        }
 
     func calculatePayAsYouGoTotal(providerResults: [ProviderIdentifier: ProviderResult], copilotUsage: CopilotUsage?) -> Double {
@@ -1199,8 +1187,8 @@ final class StatusBarController: NSObject {
     }
 
     @objc func refreshClicked() {
-        logger.info("⌨️ [Keyboard] ⌘R Refresh triggered")
-        debugLog("⌨️ refreshClicked: ⌘R shortcut activated")
+        logger.info("[Keyboard] Command-R Refresh triggered")
+        debugLog("refreshClicked: Command-R shortcut activated")
         fetchUsage()
     }
 
@@ -1258,8 +1246,8 @@ final class StatusBarController: NSObject {
     }
     
     @objc func viewErrorDetailsClicked() {
-        logger.info("⌨️ [Keyboard] ⌘E View Error Details triggered")
-        debugLog("⌨️ viewErrorDetailsClicked: ⌘E shortcut activated")
+        logger.info("[Keyboard] Command-E View Error Details triggered")
+        debugLog("viewErrorDetailsClicked: Command-E shortcut activated")
         showErrorDetailsAlert()
     }
 
@@ -1578,8 +1566,8 @@ final class StatusBarController: NSObject {
     }
 
     @objc func quitClicked() {
-        logger.info("⌨️ [Keyboard] ⌘Q Quit triggered")
-        debugLog("⌨️ quitClicked: ⌘Q shortcut activated")
+        logger.info("[Keyboard] Command-Q Quit triggered")
+        debugLog("quitClicked: Command-Q shortcut activated")
         NSApp.terminate(nil)
     }
 
@@ -1598,8 +1586,8 @@ final class StatusBarController: NSObject {
     }
 
     @objc func installCLIClicked() {
-        logger.info("⌨️ [Keyboard] Install CLI triggered")
-        debugLog("⌨️ installCLIClicked: Install CLI menu item activated")
+        logger.info("[Keyboard] Install CLI triggered")
+        debugLog("installCLIClicked: Install CLI menu item activated")
         
         // Resolve CLI binary path via bundle URL (Contents/MacOS/usagebar-cli)
         let cliURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/usagebar-cli")
@@ -1607,12 +1595,12 @@ final class StatusBarController: NSObject {
         
         guard FileManager.default.fileExists(atPath: cliPath) else {
             logger.error("CLI binary not found in app bundle at \(cliPath)")
-            debugLog("❌ CLI binary not found at expected path in app bundle")
+            debugLog("CLI binary not found at expected path in app bundle")
             showAlert(title: L("CLI Not Found"), message: L("CLI binary not found in app bundle. Please reinstall the app."))
             return
         }
         
-        debugLog("✅ CLI binary found at: \(cliPath)")
+        debugLog("CLI binary found at: \(cliPath)")
         
         // Escape cliPath for safe inclusion in AppleScript string literal
         let escapedCliPath = cliPath.replacingOccurrences(of: "\"", with: "\\\"")
@@ -1623,24 +1611,24 @@ final class StatusBarController: NSObject {
         do shell script "mkdir -p /usr/local/bin && cp " & quoted form of cliPath & " /usr/local/bin/usagebar && chmod +x /usr/local/bin/usagebar" with administrator privileges
         """
         
-        debugLog("🔐 Executing AppleScript for privileged installation")
+        debugLog("Executing AppleScript for privileged installation")
         var error: NSDictionary?
         if let scriptObject = NSAppleScript(source: script) {
             scriptObject.executeAndReturnError(&error)
             
             if let error = error {
                 logger.error("CLI installation failed: \(error.description)")
-                debugLog("❌ Installation failed: \(error.description)")
+                debugLog("Installation failed: \(error.description)")
                 showAlert(title: L("Installation Failed"), message: "Failed to install CLI: \(error.description)")
             } else {
                 logger.info("CLI installed successfully to /usr/local/bin/usagebar")
-                debugLog("✅ CLI installed successfully")
+                debugLog("CLI installed successfully")
                 showAlert(title: L("Success"), message: L("CLI installed to /usr/local/bin/usagebar\n\nYou can now use 'usagebar' command in Terminal."))
                 updateCLIInstallState()
             }
         } else {
             logger.error("Failed to create AppleScript object")
-            debugLog("❌ Failed to create AppleScript object")
+            debugLog("Failed to create AppleScript object")
             showAlert(title: L("Installation Failed"), message: L("Failed to create installation script."))
         }
     }
@@ -1652,12 +1640,12 @@ final class StatusBarController: NSObject {
             installCLIItem.title = L("CLI Installed (usagebar)")
             installCLIItem.state = .on
             installCLIItem.isEnabled = false
-            debugLog("✅ CLI is installed at /usr/local/bin/usagebar")
+            debugLog("CLI is installed at /usr/local/bin/usagebar")
         } else {
             installCLIItem.title = L("Install CLI (usagebar)")
             installCLIItem.state = .off
             installCLIItem.isEnabled = true
-            debugLog("ℹ️ CLI is not installed")
+            debugLog("CLI is not installed")
         }
     }
 
@@ -2069,7 +2057,7 @@ extension StatusBarController {
     /// Populates providerResults with rich fake data for marketing screenshots.
     /// Launch with --demo-mode to activate.
     func loadDemoData() {
-        debugLog("[🎬 DemoMode] Loading demo data for marketing screenshots")
+        debugLog("[DemoMode] Loading demo data for marketing screenshots")
         
         let now = Date()
         let fiveHoursFromNow = now.addingTimeInterval(5 * 3600)
@@ -2216,12 +2204,12 @@ extension StatusBarController {
         loadingProviders.removeAll()
         lastProviderErrors.removeAll()
         
-        debugLog("[🎬 DemoMode] Demo data loaded: \(providerResults.count) providers")
+        debugLog("[DemoMode] Demo data loaded: \(providerResults.count) providers")
         
         // Rebuild the entire menu with demo data
         updateMultiProviderMenu()
         updateStatusBarText()
         
-        debugLog("[🎬 DemoMode] Menu rebuilt with demo data")
+        debugLog("[DemoMode] Menu rebuilt with demo data")
     }
 }

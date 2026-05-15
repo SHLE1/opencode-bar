@@ -15,28 +15,28 @@ class BrowserCookieService {
     private init() {}
 
     func getGitHubCookies() throws -> GitHubCookies {
-        DebugLogger.log("BrowserCookieService", "Starting GitHub cookie extraction from browsers", to: "/tmp/cookie_debug.log")
+        DebugLogger.log("BrowserCookieService", "Starting GitHub cookie extraction from browsers")
 
         for browser in SupportedBrowser.allCases {
-            DebugLogger.log("BrowserCookieService", "Trying browser: \(browser.displayName)", to: "/tmp/cookie_debug.log")
+            DebugLogger.log("BrowserCookieService", "Trying browser: \(browser.displayName)")
             let paths = browser.cookieDBPaths
-            DebugLogger.log("BrowserCookieService", "Available cookie paths: \(paths.count)", to: "/tmp/cookie_debug.log")
+            DebugLogger.log("BrowserCookieService", "Available cookie paths: \(paths.count)")
 
             do {
                 let cookies = try extractCookies(from: browser)
-                DebugLogger.log("BrowserCookieService", "Cookies extracted - userSession: \(cookies.userSession?.prefix(10) ?? "nil")..., loggedIn: \(cookies.loggedIn ?? "nil")", to: "/tmp/cookie_debug.log")
+                DebugLogger.log("BrowserCookieService", "Cookies extracted - userSession: \(cookies.userSession?.prefix(10) ?? "nil")..., loggedIn: \(cookies.loggedIn ?? "nil")")
                 if cookies.isValid {
-                    DebugLogger.log("BrowserCookieService", "Successfully extracted cookies from \(browser.displayName)", to: "/tmp/cookie_debug.log")
+                    DebugLogger.log("BrowserCookieService", "Successfully extracted cookies from \(browser.displayName)")
                     return cookies
                 }
-                DebugLogger.log("BrowserCookieService", "Cookies from \(browser.displayName) are not valid (missing user_session or logged_in)", to: "/tmp/cookie_debug.log")
+                DebugLogger.log("BrowserCookieService", "Cookies from \(browser.displayName) are not valid (missing user_session or logged_in)")
             } catch {
-                DebugLogger.log("BrowserCookieService", "Failed to extract from \(browser.displayName): \(error.localizedDescription)", to: "/tmp/cookie_debug.log")
+                DebugLogger.log("BrowserCookieService", "Failed to extract from \(browser.displayName): \(error.localizedDescription)")
                 continue
             }
         }
 
-        DebugLogger.log("BrowserCookieService", "No browser found with valid GitHub cookies", to: "/tmp/cookie_debug.log")
+        DebugLogger.log("BrowserCookieService", "No browser found with valid GitHub cookies")
         throw BrowserCookieError.noBrowserFound
     }
 
@@ -44,7 +44,7 @@ class BrowserCookieService {
 
     private func extractCookies(from browser: SupportedBrowser) throws -> GitHubCookies {
         let cookieDBPaths = browser.cookieDBPaths
-        DebugLogger.log("BrowserCookieService", "Found \(cookieDBPaths.count) cookie paths for \(browser.displayName)", to: "/tmp/cookie_debug.log")
+        DebugLogger.log("BrowserCookieService", "Found \(cookieDBPaths.count) cookie paths for \(browser.displayName)")
 
         guard !cookieDBPaths.isEmpty else {
             throw BrowserCookieError.cookieDBNotFound
@@ -54,16 +54,16 @@ class BrowserCookieService {
         let aesKey = try deriveAESKey(from: encryptionKey)
 
         for path in cookieDBPaths {
-            DebugLogger.log("BrowserCookieService", "Trying cookie path: \(path)", to: "/tmp/cookie_debug.log")
+            DebugLogger.log("BrowserCookieService", "Trying cookie path: \(path)")
             do {
                 let cookies = try readCookies(from: path, aesKey: aesKey)
                 if cookies.isValid {
-                    DebugLogger.log("BrowserCookieService", "Found valid cookies at: \(path)", to: "/tmp/cookie_debug.log")
+                    DebugLogger.log("BrowserCookieService", "Found valid cookies at: \(path)")
                     return cookies
                 }
-                DebugLogger.log("BrowserCookieService", "Cookies at \(path) are not valid", to: "/tmp/cookie_debug.log")
+                DebugLogger.log("BrowserCookieService", "Cookies at \(path) are not valid")
             } catch {
-                DebugLogger.log("BrowserCookieService", "Failed to read cookies from \(path): \(error.localizedDescription)", to: "/tmp/cookie_debug.log")
+                DebugLogger.log("BrowserCookieService", "Failed to read cookies from \(path): \(error.localizedDescription)")
                 continue
             }
         }

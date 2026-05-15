@@ -181,7 +181,7 @@ extension StatusBarController {
         let withAction = menu.items.filter { !$0.isSeparatorItem && $0.action != nil }.count
         let withSubmenu = menu.items.filter { $0.hasSubmenu }.count
 
-        statusBarMenuLogger.info("📋 [Menu] Items: \(total) (sep:\(separators), actions:\(withAction), submenus:\(withSubmenu))")
+        statusBarMenuLogger.info("[Menu] Items: \(total) (sep:\(separators), actions:\(withAction), submenus:\(withSubmenu))")
 
         var output = "\n========== MENU STRUCTURE ==========\n"
         for (index, item) in menu.items.enumerated() {

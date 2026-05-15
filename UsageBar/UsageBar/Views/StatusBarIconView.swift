@@ -95,10 +95,7 @@ final class StatusBarIconView: NSView {
     }
 
     private var textColor: NSColor {
-        guard let button = self.superview as? NSStatusBarButton else {
-            return .white
-        }
-        return button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .black
+        MenuDesignToken.statusBarTextColor(for: superview ?? self)
     }
 
     override var intrinsicContentSize: NSSize {

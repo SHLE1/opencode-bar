@@ -62,20 +62,20 @@ extension StatusBarController {
     }
 
     @objc func handleRefreshIntervalChange() {
-        debugLog("🔔 Settings: refreshInterval changed")
+        debugLog("Settings: refreshInterval changed")
         restartRefreshTimer()
         updateRefreshIntervalMenu()
     }
 
     @objc func handlePredictionPeriodChange() {
-        debugLog("🔔 Settings: predictionPeriod changed")
+        debugLog("Settings: predictionPeriod changed")
         updatePredictionPeriodMenu()
         updateHistorySubmenu()
         updateMultiProviderMenu()
     }
 
     @objc func handleEnabledProvidersChange() {
-        debugLog("🔔 Settings: enabledProviders changed")
+        debugLog("Settings: enabledProviders changed")
         updateEnabledProvidersMenu()
         updateStatusBarDisplayMenuState()
         updateStatusBarText()
@@ -83,60 +83,60 @@ extension StatusBarController {
     }
 
     @objc func handleCriticalBadgeChange() {
-        debugLog("🔔 Settings: criticalBadge changed")
+        debugLog("Settings: criticalBadge changed")
         updateStatusBarText()
     }
 
     @objc func handleShowProviderIconChange() {
-        debugLog("🔔 Settings: showProviderIcon changed")
+        debugLog("Settings: showProviderIcon changed")
         updateStatusBarText()
     }
 
     @objc func handleMultiProviderProvidersChange() {
-        debugLog("🔔 Settings: multiProviderProviders changed")
+        debugLog("Settings: multiProviderProviders changed")
         updateStatusBarDisplayMenuState()
         updateStatusBarText()
     }
 
     @objc func handleCodexStatusBarAccountChange() {
-        debugLog("🔔 Settings: codexStatusBarAccount changed")
+        debugLog("Settings: codexStatusBarAccount changed")
         updateStatusBarText()
         updateMultiProviderMenu()
     }
 
     @objc func handleCodexStatusBarWindowChange() {
-        debugLog("🔔 Settings: codexStatusBarWindow changed")
+        debugLog("Settings: codexStatusBarWindow changed")
         updateStatusBarText()
         updateMultiProviderMenu()
     }
 
     @objc func handleAppLanguageChange() {
-        debugLog("🔔 Settings: appLanguage changed")
+        debugLog("Settings: appLanguage changed")
         setupMenu()
         updateMultiProviderMenu()
         updateStatusBarText()
     }
 
     @objc func handleSubscriptionChange() {
-        debugLog("🔔 Settings: subscription changed")
+        debugLog("Settings: subscription changed")
         updateMultiProviderMenu()
         updateStatusBarText()
     }
 
     @objc func handleCopilotAddOnChange() {
-        debugLog("🔔 Settings: Copilot Add-on toggled")
+        debugLog("Settings: Copilot Add-on toggled")
         updateMultiProviderMenu()
         updateStatusBarText()
     }
 
     @objc func handleStatusBarOrderChange() {
-        debugLog("🔔 Settings: status bar subscription order changed")
+        debugLog("Settings: status bar subscription order changed")
         updateMultiProviderMenu()
         updateStatusBarText()
     }
 
     @objc func handlePayAsYouGoOrderChange() {
-        debugLog("🔔 Settings: pay-as-you-go order changed")
+        debugLog("Settings: pay-as-you-go order changed")
         updateMultiProviderMenu()
         updateStatusBarText()
     }

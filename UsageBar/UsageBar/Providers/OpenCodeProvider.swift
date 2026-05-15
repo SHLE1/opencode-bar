@@ -24,12 +24,12 @@ final class OpenCodeProvider: ProviderProtocol {
     /// 3. Fallback to common hardcoded paths
     private func findOpenCodeBinary() -> URL? {
         logger.info("OpenCode: Searching for opencode binary...")
-        DebugLogger.log("OpenCode", "Starting opencode binary search", to: "/tmp/opencode_debug.log")
+        DebugLogger.log("OpenCode", "Starting opencode binary search")
 
         // Strategy 1: Try "which opencode" in current environment
         if let path = findBinaryViaWhich() {
             logger.info("OpenCode: Found via 'which': \(path.path)")
-            DebugLogger.log("OpenCode", "Found via 'which': \(path.path)", to: "/tmp/opencode_debug.log")
+            DebugLogger.log("OpenCode", "Found via 'which': \(path.path)")
             binarySourceDescription = "PATH (\(path.path))"
             return path
         }
@@ -37,7 +37,7 @@ final class OpenCodeProvider: ProviderProtocol {
         // Strategy 2: Try via login shell to get user's full PATH
         if let path = findBinaryViaLoginShell() {
             logger.info("OpenCode: Found via login shell: \(path.path)")
-            DebugLogger.log("OpenCode", "Found via login shell: \(path.path)", to: "/tmp/opencode_debug.log")
+            DebugLogger.log("OpenCode", "Found via login shell: \(path.path)")
             binarySourceDescription = "login shell PATH (\(path.path))"
             return path
         }
@@ -53,13 +53,13 @@ final class OpenCodeProvider: ProviderProtocol {
 
         for path in fallbackPaths where FileManager.default.fileExists(atPath: path) {
             logger.info("OpenCode: Found via fallback path: \(path)")
-            DebugLogger.log("OpenCode", "Found via fallback: \(path)", to: "/tmp/opencode_debug.log")
+            DebugLogger.log("OpenCode", "Found via fallback: \(path)")
             binarySourceDescription = "fallback (\(path))"
             return URL(fileURLWithPath: path)
         }
 
         logger.error("OpenCode: Binary not found in any location")
-        DebugLogger.log("OpenCode", "Binary not found anywhere", to: "/tmp/opencode_debug.log")
+        DebugLogger.log("OpenCode", "Binary not found anywhere")
         return nil
     }
 
@@ -90,7 +90,7 @@ final class OpenCodeProvider: ProviderProtocol {
 
             return output
         } catch {
-            DebugLogger.log("OpenCode", "\(failureMessage): \(error.localizedDescription)", to: "/tmp/opencode_debug.log")
+            DebugLogger.log("OpenCode", "\(failureMessage): \(error.localizedDescription)")
             return nil
         }
     }
@@ -153,7 +153,7 @@ final class OpenCodeProvider: ProviderProtocol {
             throw ProviderError.providerError("OpenCode CLI not accessible at \(binaryPath.path)")
         }
 
-        DebugLogger.log("OpenCode", "Fetching current stats only (history tracking disabled)", to: "/tmp/opencode_debug.log")
+        DebugLogger.log("OpenCode", "Fetching current stats only (history tracking disabled)")
         let output = try await runOpenCodeStats(days: 7)
         let stats = try parseStats(output)
         let endpointConfiguration = TokenManager.shared.getCodexEndpointConfiguration()
@@ -170,7 +170,7 @@ final class OpenCodeProvider: ProviderProtocol {
         if displayStats.excludedCost > 0 {
             let excludedSummary = String(format: "%.2f", displayStats.excludedCost)
             logger.info("OpenCode: Excluded $\(excludedSummary) of externally routed OpenAI usage from pay-as-you-go totals")
-            DebugLogger.log("OpenCode", "Excluded $\(excludedSummary) of externally routed OpenAI usage from OpenCode totals", to: "/tmp/opencode_debug.log")
+            DebugLogger.log("OpenCode", "Excluded $\(excludedSummary) of externally routed OpenAI usage from OpenCode totals")
         }
 
         let details = DetailedUsage(

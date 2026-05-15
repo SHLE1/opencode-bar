@@ -28,7 +28,7 @@ struct DailyUsage: Codable {
 
 struct UsageHistory: Codable {
     let fetchedAt: Date
-    let days: [DailyUsage]       // ⚠️ Stores full month data (separate from 7-day UI display)
+    let days: [DailyUsage]       // Stores full month data (separate from 7-day UI display)
 
     var totalRequests: Double { days.reduce(0) { $0 + $1.totalRequests } }
     var totalBilledAmount: Double { days.reduce(0) { $0 + $1.billedAmount } }

@@ -15,13 +15,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private var appearanceObserver: NSObjectProtocol?
 
     @objc func checkForUpdates() {
-        logger.info("⌨️ [Keyboard] ⌘U Check for Updates triggered")
+        logger.info("[Keyboard] Command-U Check for Updates triggered")
         NSApp.activate(ignoringOtherApps: true)
         updaterController.checkForUpdates(self)
     }
 
     @objc func openSettingsWindow() {
-        logger.info("⌨️ [Keyboard] Settings window triggered")
+        logger.info("[Keyboard] Settings window triggered")
         NSApp.activate(ignoringOtherApps: true)
 
         if let settingsWindow {
@@ -106,14 +106,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         // Do not override these values on launch.
         if updater.updateCheckInterval != desiredCheckInterval {
             updater.updateCheckInterval = desiredCheckInterval
-            logger.info("🔄 [Sparkle] Update check interval updated to 6h (\(desiredCheckInterval)s)")
+            logger.info("[Sparkle] Update check interval updated to 6h (\(desiredCheckInterval)s)")
         }
 
         let checksEnabled = updater.automaticallyChecksForUpdates
         let downloadsEnabled = updater.automaticallyDownloadsUpdates
         let checkInterval = updater.updateCheckInterval
         
-        logger.info("🔄 [Sparkle] Auto-update state loaded: checks=\(checksEnabled), downloads=\(downloadsEnabled), interval=\(checkInterval)s")
+        logger.info("[Sparkle] Auto-update state loaded: checks=\(checksEnabled), downloads=\(downloadsEnabled), interval=\(checkInterval)s")
     }
 
     private func closeAllWindows() {
@@ -133,10 +133,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     // MARK: - SPUUpdaterDelegate
     
     nonisolated func updaterWillRelaunchApplication(_ updater: SPUUpdater) {
-        logger.info("🔄 [Sparkle] App will relaunch after update")
+        logger.info("[Sparkle] App will relaunch after update")
     }
     
-    nonisolated func updaterDidRelaunchApplication(_ updater: SPUUpdater) {
-        logger.info("✅ [Sparkle] App relaunched successfully")
+    private nonisolated func updaterDidRelaunchApplication(_ updater: SPUUpdater) {
+        logger.info("[Sparkle] App relaunched successfully")
     }
 }

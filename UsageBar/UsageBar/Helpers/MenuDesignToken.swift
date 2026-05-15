@@ -22,6 +22,9 @@ enum MenuDesignToken {
         
         /// Status indicator dot size (e.g., circle.fill for status)
         static let statusDotSize: CGFloat = 8
+
+        /// Status icon size used inside compact custom menu rows.
+        static let paceStatusIconSize: CGFloat = 14
     }
     
     /// Spacing and margin constants for layout
@@ -72,5 +75,9 @@ enum MenuDesignToken {
     /// Calculation: menuWidth - trailingMargin - iconSize = 300 - 14 - 16 = 270
     static var rightElementX: CGFloat {
         Dimension.menuWidth - Spacing.trailingMargin - Dimension.iconSize
+    }
+
+    static func statusBarTextColor(for view: NSView) -> NSColor {
+        view.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .white : .black
     }
 }

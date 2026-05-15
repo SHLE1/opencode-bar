@@ -1,7 +1,7 @@
 import AppKit
 
 /// Multi-provider status bar icon view
-/// Displays: [$XXX 🔴ClaudeIcon 5% 🔴GeminiIcon 8%]
+/// Displays compact cost and provider alert percentages in the status bar.
 final class MultiProviderStatusBarIconView: NSView {
     private var totalOverageCost: Double = 0
     private var alerts: [ProviderAlert] = []
@@ -84,34 +84,31 @@ final class MultiProviderStatusBarIconView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
-        // Use view's own appearance to detect menu bar background (not app appearance)
-        let isDark = self.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-
         var xOffset: CGFloat = 2
         let yOffset: CGFloat = 5
 
-        drawDollarIcon(at: NSPoint(x: xOffset, y: yOffset), isDark: isDark)
+        drawDollarIcon(at: NSPoint(x: xOffset, y: yOffset))
         xOffset += 20
 
         if isLoading {
-            drawText("...", at: NSPoint(x: xOffset, y: yOffset), font: .monospacedDigitSystemFont(ofSize: 11, weight: .medium), isDark: isDark)
+            drawText("...", at: NSPoint(x: xOffset, y: yOffset), font: .monospacedDigitSystemFont(ofSize: 11, weight: .medium))
             return
         }
 
         if hasError {
-            drawText("Err", at: NSPoint(x: xOffset, y: yOffset), font: .monospacedDigitSystemFont(ofSize: 11, weight: .medium), isDark: isDark)
+            drawText("Err", at: NSPoint(x: xOffset, y: yOffset), font: .monospacedDigitSystemFont(ofSize: 11, weight: .medium))
             return
         }
 
         let costText = formatCost(totalOverageCost)
         let costFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
-        drawText(costText, at: NSPoint(x: xOffset, y: yOffset), font: costFont, isDark: isDark)
+        drawText(costText, at: NSPoint(x: xOffset, y: yOffset), font: costFont)
 
         let costWidth = (costText as NSString).size(withAttributes: [.font: costFont]).width
         xOffset += costWidth + 4
 
         for alert in alerts {
-            drawProviderAlert(alert, at: NSPoint(x: xOffset, y: yOffset), isDark: isDark)
+            drawProviderAlert(alert, at: NSPoint(x: xOffset, y: yOffset))
 
             let percentText = String(format: "%.0f%%", alert.remainingPercent)
             let percentFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
@@ -121,20 +118,18 @@ final class MultiProviderStatusBarIconView: NSView {
         }
     }
 
-    private func drawDollarIcon(at origin: NSPoint, isDark: Bool) {
+    private func drawDollarIcon(at origin: NSPoint) {
         let text = "$"
         let font = NSFont.boldSystemFont(ofSize: 14)
-        // Use adaptive color for light/dark mode visibility
-        let textColor = isDark ? NSColor.white : NSColor.black
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: textColor
+            .foregroundColor: MenuDesignToken.statusBarTextColor(for: self)
         ]
         let attrString = NSAttributedString(string: text, attributes: attributes)
         attrString.draw(at: origin)
     }
 
-    private func drawProviderAlert(_ alert: ProviderAlert, at origin: NSPoint, isDark: Bool) {
+    private func drawProviderAlert(_ alert: ProviderAlert, at origin: NSPoint) {
         let iconName: String
         switch alert.identifier {
         case .claude:
@@ -173,7 +168,7 @@ final class MultiProviderStatusBarIconView: NSView {
         } else if let sfIcon = NSImage(systemSymbolName: iconName, accessibilityDescription: alert.identifier.displayName) {
             icon = sfIcon
         } else {
-            drawAlertCircle(at: origin, isDark: isDark)
+            drawAlertCircle(at: origin)
             return
         }
 
@@ -194,22 +189,20 @@ final class MultiProviderStatusBarIconView: NSView {
         // Draw percentage text next to icon
         let percentText = String(format: "%.0f%%", alert.remainingPercent)
         let percentFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
-        drawText(percentText, at: NSPoint(x: origin.x + 16, y: origin.y), font: percentFont, isDark: isDark)
+        drawText(percentText, at: NSPoint(x: origin.x + 16, y: origin.y), font: percentFont)
     }
 
-    private func drawAlertCircle(at origin: NSPoint, isDark: Bool) {
+    private func drawAlertCircle(at origin: NSPoint) {
         let rect = NSRect(x: origin.x, y: origin.y, width: 14, height: 14)
         let path = NSBezierPath(ovalIn: rect)
         NSColor.systemRed.setFill()
         path.fill()
     }
 
-    private func drawText(_ text: String, at origin: NSPoint, font: NSFont, isDark: Bool) {
-        // Use adaptive color for light/dark mode visibility
-        let textColor = isDark ? NSColor.white : NSColor.black
+    private func drawText(_ text: String, at origin: NSPoint, font: NSFont) {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: textColor
+            .foregroundColor: MenuDesignToken.statusBarTextColor(for: self)
         ]
         let attrString = NSAttributedString(string: text, attributes: attributes)
         attrString.draw(at: origin)
