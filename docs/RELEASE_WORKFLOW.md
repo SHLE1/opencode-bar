@@ -41,6 +41,7 @@ Each release should publish:
 - `UsageBar-v<VERSION>-unsigned.zip`
 - `UsageBar-v<VERSION>-unsigned.dmg`
 - `appcast.xml`
+- `release-notes.html`
 
 Both artifacts must be built as **universal binaries**:
 
@@ -150,12 +151,21 @@ Use the generated `sparkle:edSignature` and `length` values in the appcast enclo
 
 ## 8. Generate Sparkle Appcast
 
+Generate release notes before generating the appcast. The release notes must be available in both forms:
+
+- `release-notes.md` for the GitHub Release body
+- `release-notes.html` for Sparkle
+
+Use GitHub's generated release notes first. If GitHub does not produce concrete entries for the tag range, fall back to the commit summary from `PREVIOUS_TAG..HEAD`.
+
 The generated `appcast.xml` must include:
 
 - `sparkle:version`
 - `sparkle:shortVersionString`
 - `sparkle:minimumSystemVersion`
 - `link` pointing to the GitHub Release page
+- `sparkle:releaseNotesLink` pointing to `release-notes.html`
+- `description` containing the HTML release notes
 - an `enclosure` pointing to the ZIP archive
 - `sparkle:edSignature`
 - `length`
@@ -177,6 +187,7 @@ Release notes must also include:
 - artifact names
 - SHA256 values
 - `appcast.xml`
+- `release-notes.html`
 - a note that Sparkle verifies updates with the appcast EdDSA signature
 
 Example notice:
@@ -252,6 +263,7 @@ Current workflows are aligned to the unsigned artifact process:
   - Builds unsigned artifacts
   - Verifies universal binaries
   - Signs the ZIP archive with Sparkle EdDSA
+  - Generates release notes before the appcast, with a commit-summary fallback
   - Generates and uploads installable `appcast.xml` for Sparkle
   - Generates release notes including the `xattr` notice
   - Creates the GitHub Release

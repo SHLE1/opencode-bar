@@ -235,46 +235,6 @@ jobs:
             echo "length=$LENGTH"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create Sparkle Appcast
-        id: appcast
-        run: |
-          VERSION_TAG="${{ steps.release_version.outputs.version_tag }}"
-          VERSION_NUMBER="${{ steps.release_version.outputs.version_number }}"
-          ZIP_NAME="${{ steps.package.outputs.zip_name }}"
-          ZIP_LENGTH="${{ steps.sparkle_signature.outputs.length }}"
-          ZIP_ED_SIGNATURE="${{ steps.sparkle_signature.outputs.ed_signature }}"
-          DIST_DIR="$RUNNER_TEMP/release-dist"
-          APPCAST_PATH="$DIST_DIR/appcast.xml"
-          RELEASE_NOTES_URL="https://github.com/${{ github.repository }}/releases/tag/$VERSION_TAG"
-          UPDATE_URL="https://github.com/${{ github.repository }}/releases/download/$VERSION_TAG/$ZIP_NAME"
-          PUB_DATE=$(LC_ALL=C TZ=UTC date -R)
-
-          printf '%s\n' \
-            '<?xml version="1.0" encoding="utf-8"?>' \
-            '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' \
-            '  <channel>' \
-            '    <title>UsageBar Updates</title>' \
-            '    <description>UsageBar release updates</description>' \
-            '    <language>en</language>' \
-            "    <link>https://github.com/${{ github.repository }}/releases</link>" \
-            '    <item>' \
-            "      <title>UsageBar $VERSION_TAG</title>" \
-            "      <sparkle:version>$VERSION_NUMBER</sparkle:version>" \
-            "      <sparkle:shortVersionString>$VERSION_NUMBER</sparkle:shortVersionString>" \
-            '      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>' \
-            "      <pubDate>$PUB_DATE</pubDate>" \
-            "      <link>$RELEASE_NOTES_URL</link>" \
-            "      <description>See the release notes for changes in $VERSION_TAG.</description>" \
-            "      <enclosure url=\"$UPDATE_URL\" type=\"application/octet-stream\" sparkle:edSignature=\"$ZIP_ED_SIGNATURE\" length=\"$ZIP_LENGTH\" />" \
-            '    </item>' \
-            '  </channel>' \
-            '</rss>' \
-            > "$APPCAST_PATH"
-
-          xmllint --noout "$APPCAST_PATH"
-          echo "appcast_path=$APPCAST_PATH" >> "$GITHUB_OUTPUT"
-          echo "appcast_name=appcast.xml" >> "$GITHUB_OUTPUT"
-
       - name: Generate Release Notes Body
         id: generated_notes
         env:
@@ -289,6 +249,8 @@ jobs:
             -f previous_tag_name="$PREVIOUS_TAG" \
             --jq '.body' > "$RUNNER_TEMP/generated-release-notes-body.md"
 
+          git log --no-merges --pretty=format:'- %s' "$PREVIOUS_TAG"..HEAD > "$RUNNER_TEMP/generated-commit-summary.md"
+
           cat "$RUNNER_TEMP/generated-release-notes-body.md"
 
       - name: Create Release Notes File
@@ -297,12 +259,28 @@ jobs:
           PREVIOUS_TAG="${{ steps.release_version.outputs.previous_tag }}"
           ZIP_NAME="${{ steps.package.outputs.zip_name }}"
           DMG_NAME="${{ steps.package.outputs.dmg_name }}"
-          APPCAST_NAME="${{ steps.appcast.outputs.appcast_name }}"
+          APPCAST_NAME="appcast.xml"
           ZIP_SHA="${{ steps.package.outputs.zip_sha }}"
           DMG_SHA="${{ steps.package.outputs.dmg_sha }}"
           GENERATED_BODY_FILE="$RUNNER_TEMP/generated-release-notes-body.md"
+          GENERATED_COMMIT_FILE="$RUNNER_TEMP/generated-commit-summary.md"
+          CLEAN_GENERATED_FILE="$RUNNER_TEMP/generated-release-notes-clean.md"
 
-          cp "$GENERATED_BODY_FILE" "$RUNNER_TEMP/release-notes.md"
+          sed \
+            -e '/^<!-- Release notes generated using configuration /d' \
+            -e '/^\*\*Full Changelog\*\*: /d' \
+            "$GENERATED_BODY_FILE" > "$CLEAN_GENERATED_FILE"
+
+          {
+            printf '%s\n' "## What's Changed"
+            if grep -Eq '^- |^## ' "$CLEAN_GENERATED_FILE"; then
+              cat "$CLEAN_GENERATED_FILE"
+            elif [ -s "$GENERATED_COMMIT_FILE" ]; then
+              cat "$GENERATED_COMMIT_FILE"
+            else
+              printf '%s\n' "- Maintenance release."
+            fi
+          } > "$RUNNER_TEMP/release-notes.md"
 
           {
             printf '\n%s\n' '## Artifacts'
@@ -322,7 +300,98 @@ jobs:
             printf '\n%s\n' "**Full Changelog**: https://github.com/SHLE1/usage-bar/compare/${PREVIOUS_TAG}...$VERSION_TAG"
           } >> "$RUNNER_TEMP/release-notes.md"
 
+          ruby -rcgi -e '
+            markdown = File.read(ENV.fetch("RUNNER_TEMP") + "/release-notes.md")
+            body = CGI.escapeHTML(markdown)
+            html = <<~HTML
+              <!doctype html>
+              <html>
+              <head>
+                <meta charset="utf-8">
+                <style>
+                  body { font: -apple-system-body; margin: 0; padding: 0; color: -apple-system-label; }
+                  pre { white-space: pre-wrap; word-wrap: break-word; font: -apple-system-body; }
+                </style>
+              </head>
+              <body><pre>#{body}</pre></body>
+              </html>
+            HTML
+            File.write(ENV.fetch("RUNNER_TEMP") + "/release-notes.html", html)
+          '
+
           cat "$RUNNER_TEMP/release-notes.md"
+
+      - name: Create Sparkle Appcast
+        id: appcast
+        run: |
+          VERSION_TAG="${{ steps.release_version.outputs.version_tag }}"
+          VERSION_NUMBER="${{ steps.release_version.outputs.version_number }}"
+          ZIP_NAME="${{ steps.package.outputs.zip_name }}"
+          ZIP_LENGTH="${{ steps.sparkle_signature.outputs.length }}"
+          ZIP_ED_SIGNATURE="${{ steps.sparkle_signature.outputs.ed_signature }}"
+          DIST_DIR="$RUNNER_TEMP/release-dist"
+          APPCAST_PATH="$DIST_DIR/appcast.xml"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$VERSION_TAG"
+          RELEASE_NOTES_URL="https://github.com/${{ github.repository }}/releases/download/$VERSION_TAG/release-notes.html"
+          UPDATE_URL="https://github.com/${{ github.repository }}/releases/download/$VERSION_TAG/$ZIP_NAME"
+          PUB_DATE=$(LC_ALL=C TZ=UTC date -R)
+          RELEASE_NOTES_HTML="$RUNNER_TEMP/release-notes.html"
+
+          VERSION_TAG="$VERSION_TAG" \
+          VERSION_NUMBER="$VERSION_NUMBER" \
+          ZIP_LENGTH="$ZIP_LENGTH" \
+          ZIP_ED_SIGNATURE="$ZIP_ED_SIGNATURE" \
+          RELEASE_URL="$RELEASE_URL" \
+          RELEASE_NOTES_URL="$RELEASE_NOTES_URL" \
+          UPDATE_URL="$UPDATE_URL" \
+          PUB_DATE="$PUB_DATE" \
+          RELEASE_NOTES_HTML="$RELEASE_NOTES_HTML" \
+          APPCAST_PATH="$APPCAST_PATH" \
+          ruby <<'RUBY'
+          require "rexml/document"
+
+          doc = REXML::Document.new
+          doc << REXML::XMLDecl.new("1.0", "utf-8")
+          rss = doc.add_element("rss", {
+            "version" => "2.0",
+            "xmlns:sparkle" => "http://www.andymatuschak.org/xml-namespaces/sparkle"
+          })
+          channel = rss.add_element("channel")
+          channel.add_element("title").text = "UsageBar Updates"
+          channel.add_element("description").text = "UsageBar release updates"
+          channel.add_element("language").text = "en"
+          channel.add_element("link").text = "https://github.com/${{ github.repository }}/releases"
+
+          item = channel.add_element("item")
+          item.add_element("title").text = "UsageBar #{ENV.fetch("VERSION_TAG")}"
+          item.add_element("sparkle:version").text = ENV.fetch("VERSION_NUMBER")
+          item.add_element("sparkle:shortVersionString").text = ENV.fetch("VERSION_NUMBER")
+          item.add_element("sparkle:minimumSystemVersion").text = "13.0"
+          item.add_element("pubDate").text = ENV.fetch("PUB_DATE")
+          item.add_element("link").text = ENV.fetch("RELEASE_URL")
+          item.add_element("sparkle:releaseNotesLink").text = ENV.fetch("RELEASE_NOTES_URL")
+
+          description = item.add_element("description")
+          description.add(REXML::CData.new(File.read(ENV.fetch("RELEASE_NOTES_HTML"))))
+
+          item.add_element("enclosure", {
+            "url" => ENV.fetch("UPDATE_URL"),
+            "type" => "application/octet-stream",
+            "sparkle:edSignature" => ENV.fetch("ZIP_ED_SIGNATURE"),
+            "length" => ENV.fetch("ZIP_LENGTH")
+          })
+
+          formatter = REXML::Formatters::Pretty.new(2)
+          formatter.compact = true
+          File.open(ENV.fetch("APPCAST_PATH"), "w") do |file|
+            formatter.write(doc, file)
+            file.write("\n")
+          end
+          RUBY
+
+          xmllint --noout "$APPCAST_PATH"
+          echo "appcast_path=$APPCAST_PATH" >> "$GITHUB_OUTPUT"
+          echo "appcast_name=appcast.xml" >> "$GITHUB_OUTPUT"
 
       - name: Commit Version Bump and Create Tag
         if: steps.release_version.outputs.tag_exists != 'true'
@@ -342,18 +411,19 @@ jobs:
           ZIP_PATH="${{ runner.temp }}/release-dist/${{ steps.package.outputs.zip_name }}"
           DMG_PATH="${{ runner.temp }}/release-dist/${{ steps.package.outputs.dmg_name }}"
           APPCAST_PATH="${{ steps.appcast.outputs.appcast_path }}"
+          RELEASE_NOTES_HTML="${{ runner.temp }}/release-notes.html"
           RELEASE_NAME="UsageBar ${VERSION_TAG}"
           NOTES_FILE="${{ runner.temp }}/release-notes.md"
 
           if gh release view "$VERSION_TAG" >/dev/null 2>&1; then
-            gh release upload "$VERSION_TAG" "$DMG_PATH" "$ZIP_PATH" "$APPCAST_PATH" --clobber
+            gh release upload "$VERSION_TAG" "$DMG_PATH" "$ZIP_PATH" "$APPCAST_PATH" "$RELEASE_NOTES_HTML" --clobber
             gh release edit "$VERSION_TAG" --title "$RELEASE_NAME" --notes-file "$NOTES_FILE"
           else
             CREATE_ARGS=()
             if [ "${{ inputs.prerelease }}" = "true" ]; then
               CREATE_ARGS+=(--prerelease)
             fi
-            gh release create "$VERSION_TAG" "$DMG_PATH" "$ZIP_PATH" "$APPCAST_PATH" \
+            gh release create "$VERSION_TAG" "$DMG_PATH" "$ZIP_PATH" "$APPCAST_PATH" "$RELEASE_NOTES_HTML" \
               --title "$RELEASE_NAME" \
               --notes-file "$NOTES_FILE" \
               "${CREATE_ARGS[@]}"
@@ -407,4 +477,5 @@ jobs:
             ${{ runner.temp }}/release-dist/*.dmg
             ${{ runner.temp }}/release-dist/appcast.xml
             ${{ runner.temp }}/release-notes.md
+            ${{ runner.temp }}/release-notes.html
           retention-days: 30
