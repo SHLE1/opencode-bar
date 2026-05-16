@@ -1,13 +1,14 @@
 # Release Workflow Guide
 
-This document describes the current **unsigned release** workflow for **UsageBar**.
+This document describes the current release workflow for **UsageBar**.
 
 > **Current Policy**
 >
 > - There is currently **no Apple signing certificate** available for this project.
 > - Releases must publish **unsigned `.zip`** and **unsigned `.dmg`** artifacts only.
 > - Releases must publish **`appcast.xml`** for Sparkle update checks.
-> - Until a valid Apple signing certificate is available, `appcast.xml` must be informational only and must not include a downloadable enclosure.
+> - `appcast.xml` must expose the ZIP archive as the Sparkle update enclosure.
+> - The Sparkle enclosure must include an EdDSA signature generated from `SPARKLE_ED_PRIVATE_KEY`.
 > - Every release must include **release notes**.
 > - Every unsigned release must include a **Gatekeeper / `xattr` notice**.
 > - Every release must also update the **`SHLE1/homebrew-tap`** cask to the same version.
@@ -19,11 +20,11 @@ This document describes the current **unsigned release** workflow for **UsageBar
 - Push access to `SHLE1/usage-bar`
 - Push access to `SHLE1/homebrew-tap`
 - `HOMEBREW_TAP_GITHUB_TOKEN` available for workflow-based releases
-- `SPARKLE_ED_PRIVATE_KEY` available as a GitHub Actions secret, only after a valid Apple signing certificate is available and Sparkle auto-install updates are re-enabled.
+- `SPARKLE_ED_PRIVATE_KEY` available as a GitHub Actions secret.
   - This is the Sparkle EdDSA private key, not an Apple Developer certificate.
   - Its public key must match `SUPublicEDKey` in `UsageBar/UsageBar/Info.plist`.
 
-If Sparkle auto-install updates are re-enabled later and the matching private key is unavailable, generate a new Sparkle key pair, update `SUPublicEDKey`, and save the exported private key as the `SPARKLE_ED_PRIVATE_KEY` repository secret:
+If the matching private key is unavailable, generate a new Sparkle key pair, update `SUPublicEDKey`, and save the exported private key as the `SPARKLE_ED_PRIVATE_KEY` repository secret:
 
 ```bash
 SPARKLE_BIN="/path/to/Sparkle/bin"
@@ -134,9 +135,20 @@ shasum -a 256 ../dist/${VERSION_TAG}/${ZIP_NAME}
 shasum -a 256 ../dist/${VERSION_TAG}/${DMG_NAME}
 ```
 
-## 7. Generate Sparkle Appcast
+## 7. Sign the Sparkle Update
 
-Because current releases are unsigned and not notarized, Sparkle must not auto-install the release archive. The appcast should be informational only and point users to the GitHub Release page for manual installation.
+UsageBar artifacts are not Apple-signed or notarized, but Sparkle update archives must still be signed with Sparkle's EdDSA key. Sparkle verifies this signature before installing an update.
+
+```bash
+SPARKLE_SIGN_UPDATE="/path/to/Sparkle/bin/sign_update"
+ZIP_PATH="../dist/${VERSION_TAG}/${ZIP_NAME}"
+
+printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$SPARKLE_SIGN_UPDATE" --ed-key-file - "$ZIP_PATH"
+```
+
+Use the generated `sparkle:edSignature` and `length` values in the appcast enclosure.
+
+## 8. Generate Sparkle Appcast
 
 The generated `appcast.xml` must include:
 
@@ -144,11 +156,7 @@ The generated `appcast.xml` must include:
 - `sparkle:shortVersionString`
 - `sparkle:minimumSystemVersion`
 - `link` pointing to the GitHub Release page
-- `sparkle:informationalUpdate`
-
-It must not include:
-
-- an `enclosure` pointing to the release ZIP or DMG
+- an `enclosure` pointing to the ZIP archive
 - `sparkle:edSignature`
 - `length`
 
@@ -158,7 +166,7 @@ The automated `.github/workflows/manual-release.yml` workflow performs this step
 https://github.com/SHLE1/usage-bar/releases/latest/download/appcast.xml
 ```
 
-## 8. Create Git Tag and Release
+## 9. Create Git Tag and Release
 
 Every release must include release notes.
 
@@ -169,7 +177,7 @@ Release notes must also include:
 - artifact names
 - SHA256 values
 - `appcast.xml`
-- a note that Sparkle update checks open the release page for manual installation while artifacts remain unsigned
+- a note that Sparkle verifies updates with the appcast EdDSA signature
 
 Example notice:
 
@@ -200,7 +208,7 @@ gh release create v0.0.7 \
   --notes-file /path/to/release-notes.md
 ```
 
-## 9. Update Homebrew Tap
+## 10. Update Homebrew Tap
 
 Every release must update `SHLE1/homebrew-tap`.
 
@@ -231,7 +239,7 @@ end
 
 ## GitHub Actions Workflows
 
-Current workflows are aligned to the unsigned-only process:
+Current workflows are aligned to the unsigned artifact process:
 
 - `.github/workflows/build-release.yml`
   - Builds unsigned artifacts for validation on push / PR / manual run
@@ -243,7 +251,8 @@ Current workflows are aligned to the unsigned-only process:
   - Updates version files
   - Builds unsigned artifacts
   - Verifies universal binaries
-  - Generates and uploads informational `appcast.xml` for Sparkle
+  - Signs the ZIP archive with Sparkle EdDSA
+  - Generates and uploads installable `appcast.xml` for Sparkle
   - Generates release notes including the `xattr` notice
   - Creates the GitHub Release
   - Updates `SHLE1/homebrew-tap`
@@ -266,7 +275,7 @@ Check that the latest GitHub Release contains `appcast.xml`:
 gh release view --json assets --jq '.assets[].name'
 ```
 
-If Check for Updates reports that an update is improperly signed, confirm the latest `appcast.xml` is informational only. Unsigned artifacts must not be exposed to Sparkle as installable enclosures.
+If Check for Updates reports that an update is improperly signed, confirm the latest `appcast.xml` includes a ZIP enclosure with `sparkle:edSignature` and `length`, and confirm the signing key matches `SUPublicEDKey`.
 
 ### Workflow fails because tap update cannot run
 

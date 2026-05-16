@@ -1,4 +1,4 @@
-name: Manual Unsigned Release
+name: Manual Release
 
 on:
   workflow_dispatch:
@@ -197,14 +197,56 @@ jobs:
             echo "dmg_sha=$DMG_SHA"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Sign Sparkle Update
+        id: sparkle_signature
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          ZIP_PATH="${{ runner.temp }}/release-dist/${{ steps.package.outputs.zip_name }}"
+
+          if [ -z "$SPARKLE_ED_PRIVATE_KEY" ]; then
+            echo "SPARKLE_ED_PRIVATE_KEY is not set. Failing because Sparkle updates require an EdDSA signature."
+            exit 1
+          fi
+
+          SPARKLE_SIGN_UPDATE=$(find "$HOME/Library/Developer/Xcode/DerivedData" \
+            -path "*/Sparkle/bin/sign_update" \
+            -not -path "*/old_dsa_scripts/*" \
+            -type f \
+            | head -n 1)
+
+          if [ -z "$SPARKLE_SIGN_UPDATE" ]; then
+            echo "Sparkle sign_update tool was not found."
+            exit 1
+          fi
+
+          SIGNATURE_OUTPUT=$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$SPARKLE_SIGN_UPDATE" --ed-key-file - "$ZIP_PATH")
+          ED_SIGNATURE=$(printf '%s\n' "$SIGNATURE_OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+          LENGTH=$(printf '%s\n' "$SIGNATURE_OUTPUT" | sed -n 's/.*length="\([^"]*\)".*/\1/p')
+
+          if [ -z "$ED_SIGNATURE" ] || [ -z "$LENGTH" ]; then
+            echo "Failed to parse Sparkle signature output."
+            echo "$SIGNATURE_OUTPUT"
+            exit 1
+          fi
+
+          {
+            echo "ed_signature=$ED_SIGNATURE"
+            echo "length=$LENGTH"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create Sparkle Appcast
         id: appcast
         run: |
           VERSION_TAG="${{ steps.release_version.outputs.version_tag }}"
           VERSION_NUMBER="${{ steps.release_version.outputs.version_number }}"
+          ZIP_NAME="${{ steps.package.outputs.zip_name }}"
+          ZIP_LENGTH="${{ steps.sparkle_signature.outputs.length }}"
+          ZIP_ED_SIGNATURE="${{ steps.sparkle_signature.outputs.ed_signature }}"
           DIST_DIR="$RUNNER_TEMP/release-dist"
           APPCAST_PATH="$DIST_DIR/appcast.xml"
           RELEASE_NOTES_URL="https://github.com/${{ github.repository }}/releases/tag/$VERSION_TAG"
+          UPDATE_URL="https://github.com/${{ github.repository }}/releases/download/$VERSION_TAG/$ZIP_NAME"
           PUB_DATE=$(LC_ALL=C TZ=UTC date -R)
 
           printf '%s\n' \
@@ -222,8 +264,8 @@ jobs:
             '      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>' \
             "      <pubDate>$PUB_DATE</pubDate>" \
             "      <link>$RELEASE_NOTES_URL</link>" \
-            "      <description>UsageBar releases are currently unsigned. Open the release page and install the DMG manually.</description>" \
-            '      <sparkle:informationalUpdate />' \
+            "      <description>See the release notes for changes in $VERSION_TAG.</description>" \
+            "      <enclosure url=\"$UPDATE_URL\" type=\"application/octet-stream\" sparkle:edSignature=\"$ZIP_ED_SIGNATURE\" length=\"$ZIP_LENGTH\" />" \
             '    </item>' \
             '  </channel>' \
             '</rss>' \
@@ -269,9 +311,9 @@ jobs:
             printf '%s\n' "- \`$DMG_NAME\`"
             printf '%s\n' "  - SHA256: \`$DMG_SHA\`"
             printf '%s\n' "- \`$APPCAST_NAME\`"
-            printf '%s\n' '  - Informational Sparkle feed used by Check for Updates...'
+            printf '%s\n' '  - Sparkle feed for in-app updates'
             printf '\n%s\n' '## Notice'
-            printf '%s\n' 'These artifacts are unsigned and not notarized. Sparkle cannot safely auto-install unsigned updates, so Check for Updates opens the release page for manual installation.'
+            printf '%s\n' 'These artifacts are unsigned and not notarized. Sparkle updates are verified with the appcast EdDSA signature.'
             printf '%s\n' 'macOS Gatekeeper may require manual override before opening.'
             printf '\n%s\n' 'After moving the app to Applications, run:'
             printf '%s\n' '```bash'
