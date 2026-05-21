@@ -245,6 +245,19 @@ final class SubscriptionSettingsManager {
         getAllSubscriptionKeys().reduce(0) { $0 + getPlan(forKey: $1).cost }
     }
 
+    func getTotalMonthlySubscriptionCost(includeProvider: (ProviderIdentifier?) -> Bool) -> Double {
+        getAllSubscriptionKeys().reduce(0) { total, key in
+            let provider = providerIdentifier(fromSubscriptionKey: key)
+            guard includeProvider(provider) else { return total }
+            return total + getPlan(forKey: key).cost
+        }
+    }
+
+    private func providerIdentifier(fromSubscriptionKey key: String) -> ProviderIdentifier? {
+        let providerRawValue = key.split(separator: ".", maxSplits: 1).first.map(String.init) ?? key
+        return ProviderIdentifier(rawValue: providerRawValue)
+    }
+
     func hasAnySubscription() -> Bool {
         getAllSubscriptionKeys().contains { getPlan(forKey: $0).isSet }
     }

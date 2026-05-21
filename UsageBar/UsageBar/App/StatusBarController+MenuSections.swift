@@ -94,7 +94,8 @@ extension StatusBarController {
 
         var insertIndex = separatorIndex + 1
         let payAsYouGoTotal = calculatePayAsYouGoTotal(providerResults: providerResults, copilotUsage: currentUsage)
-        let subscriptionTotal = SubscriptionSettingsManager.shared.getTotalMonthlySubscriptionCost()
+        let subscriptionTotal = calculateVisibleSubscriptionTotal()
+        debugLog("updateMultiProviderMenu: visible subscription total=$\(String(format: "%.2f", subscriptionTotal))")
 
         let payAsYouGoSectionStartIndex = insertIndex
         let separator1 = NSMenuItem.separator()
@@ -246,6 +247,15 @@ extension StatusBarController {
 
         guard let prefix else { return nil }
         return ProviderIdentifier.allCases.first { $0.rawValue == prefix }
+    }
+
+    func calculateVisibleSubscriptionTotal() -> Double {
+        let total = SubscriptionSettingsManager.shared.getTotalMonthlySubscriptionCost { provider in
+            guard let provider else { return true }
+            return isProviderEnabled(provider)
+        }
+        debugLog("calculateVisibleSubscriptionTotal: total=$\(String(format: "%.2f", total))")
+        return total
     }
 
     private func collectVisibleSubscriptionKeys(providerResults: [ProviderIdentifier: ProviderResult]) -> Set<String> {

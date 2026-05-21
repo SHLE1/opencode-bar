@@ -545,7 +545,7 @@ final class StatusBarController: NSObject {
 
     func calculateTotalWithSubscriptions(providerResults: [ProviderIdentifier: ProviderResult], copilotUsage: CopilotUsage?) -> Double {
         let payAsYouGo = calculatePayAsYouGoTotal(providerResults: providerResults, copilotUsage: copilotUsage)
-        let subscriptions = SubscriptionSettingsManager.shared.getTotalMonthlySubscriptionCost()
+        let subscriptions = calculateVisibleSubscriptionTotal()
         return payAsYouGo + subscriptions
     }
 
@@ -1415,7 +1415,7 @@ final class StatusBarController: NSObject {
             providerResults: providerResults,
             copilotUsage: currentUsage
         )
-        let subscriptionTotal = SubscriptionSettingsManager.shared.getTotalMonthlySubscriptionCost()
+        let subscriptionTotal = calculateVisibleSubscriptionTotal()
 
         var lines = [
             "My UsageBar usage snapshot",
