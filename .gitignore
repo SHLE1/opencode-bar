@@ -54,10 +54,18 @@ data/
 nohup.out
 
 # Local AI/tooling config
-.pi
-.pi-lens
-.claude
+.pi/
+.pi-lens/
+.claude/
+.claude-plugin/
 .conductor/
 .sc/
+.alma-snapshots/
+.rpiv/
+sessions/
+labels/
+statuses/
+config.json
+events.jsonl
+views.json
 .mcp.json
-.alma-snapshots
